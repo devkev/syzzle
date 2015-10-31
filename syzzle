@@ -29,50 +29,50 @@ SYZ_VERSION=0.0.1
 
 function syz {
 	if ! __syz::rerun_if_updated "$@"; then
-		syz_dispatch "$@"
+		syz::dispatch "$@"
 	fi
 }
 
 
-function syz_dispatch {
+function syz::dispatch {
 	local cmd="$1" ; shift
-	# FIXME: call syz_empty if cmd is empty
-	# FIXME: call syz_unknown if syz_$cmd doesn't exist
+	# FIXME: call syz::empty if cmd is empty
+	# FIXME: call syz::unknown if syz_$cmd doesn't exist
 	syz_"$cmd" "$@"
 }
 
 
 # Default function when an unknown sub-command is attempted to be run
-function syz_unknown {
+function syz::unknown {
 	# FIXME: customisable action
 	# FIXME: better error message if syz_$cmd doesn't exist
 	# FIXME: default action if syz_$cmd doesn't exist should be "load", eg. "syz mongodb/2.6.11" equiv to "syz load mongodb/2.6.11"
-	syz_load "$@"
+	syz::load "$@"
 }
 
 
 # Default function when just "syz" is run
-function syz_ {
-	syz_empty
+function syz:: {
+	syz::empty
 }
 
 
-function syz_empty {
+function syz::empty {
 	# FIXME: customisable action
-	syz_show
+	syz::show
 }
 
 
-function syz_show {
-	syz_status "$@"
+function syz::show {
+	syz::status "$@"
 }
 
 
-function syz_status {
+function syz::status {
 	echo "Currently loaded modules:"
 	echo "-------------------------"
 	echo
-	syz_loaded "$@"
+	syz::loaded "$@"
 	echo
 
 	if [ "$SYZ_INACTIVE_MODULES" ]; then
@@ -80,13 +80,13 @@ function syz_status {
 		echo "Inactive modules:"
 		echo "-----------------"
 		echo
-		syz_inactive "$@"
+		syz::inactive "$@"
 		echo
 	fi
 }
 
 
-function syz_loaded {
+function syz::loaded {
 	# FIXME: identify orphaned modules and display them differently/separately.
 	# Oprhaned modules are those that have been loaded, but now fail __syz::is_loadable_dir.
 	__syz::parse_list _loaded "$SYZ_MODULES"
@@ -96,7 +96,7 @@ function syz_loaded {
 }
 
 
-function syz_inactive {
+function syz::inactive {
 	__syz::parse_list _loaded "$SYZ_INACTIVE_MODULES"
 	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
 	__syz::columnate <<< "$_loaded_str"
@@ -104,7 +104,7 @@ function syz_inactive {
 }
 
 
-function syz_load {
+function syz::load {
 	local rc=0
 	local i
 	for i; do
@@ -148,14 +148,14 @@ function syz_load {
 }
 
 
-function syz_install {
+function syz::install {
 	# FIXME: download binaries and put into place
 	# FIXME: possibly compile
 	:
 }
 
 
-function syz_isloaded {
+function syz::isloaded {
 	if __syz::isloaded "$1" _actually_loaded; then
 		echo "$_actually_loaded: loaded"
 	else
@@ -165,7 +165,7 @@ function syz_isloaded {
 }
 
 
-function syz_unload {
+function syz::unload {
 	local rc=0
 	local i
 	for i; do
@@ -216,7 +216,7 @@ function syz_unload {
 }
 
 
-function syz_avail {
+function syz::avail {
 	# FIXME: accept an arg which is a prefix-match to limit things to (defaults to "")
 	# FIXME: accept multiple args
 	local basedir
@@ -271,7 +271,7 @@ function syz_avail {
 }
 
 
-function syz_reload {
+function syz::reload {
 	# FIXME: ideally clean up and remove all the private functions also
 	local src="$SYZ_SOURCE"
 	unset SYZ_SOURCE
@@ -279,7 +279,7 @@ function syz_reload {
 }
 
 
-function syz_version {
+function syz::version {
 	echo "syz version $SYZ_VERSION"
 }
 
@@ -329,7 +329,7 @@ function __syz::rerun_if_updated {
 	if [ "$SYZ_SOURCED_AT" -a "$modtime" -a "$modtime" -gt "$SYZ_SOURCED_AT" ]; then
 		echo "syz: updated, auto-reloading..." 1>&2
 		echo 1>&2
-		syz_reload
+		syz::reload
 		# FIXME: the re-call of self should be done by the caller, who can simply do "$0" "$@"
 		syz "$@"
 		return 0
