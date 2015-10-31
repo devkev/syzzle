@@ -88,18 +88,18 @@ function syz_status {
 
 function syz_loaded {
 	# FIXME: identify orphaned modules and display them differently/separately.
-	# Oprhaned modules are those that have been loaded, but now fail _is_loadable_dir.
-	_parse_list _loaded "$SYZ_MODULES"
-	_stringify_array -d "$__syz_nl" _loaded_str _loaded
-	_columnate <<< "$_loaded_str"
+	# Oprhaned modules are those that have been loaded, but now fail __syz::is_loadable_dir.
+	__syz::parse_list _loaded "$SYZ_MODULES"
+	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
+	__syz::columnate <<< "$_loaded_str"
 	unset _loaded _loaded_str
 }
 
 
 function syz_inactive {
-	_parse_list _loaded "$SYZ_INACTIVE_MODULES"
-	_stringify_array -d "$__syz_nl" _loaded_str _loaded
-	_columnate <<< "$_loaded_str"
+	__syz::parse_list _loaded "$SYZ_INACTIVE_MODULES"
+	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
+	__syz::columnate <<< "$_loaded_str"
 	unset _loaded _loaded_str
 }
 
@@ -109,7 +109,7 @@ function syz_load {
 	local i
 	for i; do
 		# FIXME: strip any trailing "/*" when doing this check
-		if _isloaded "$i" _actually_loaded; then
+		if __syz::isloaded "$i" _actually_loaded; then
 			# FIXME: maybe force reload (ie. unload then reload) it in this case?
 			echo "Module $_actually_loaded is already loaded, skipping"
 			continue
@@ -117,7 +117,7 @@ function syz_load {
 		# FIXME: if no trailing "/*", then figure out the default version
 		local found=
 		for basedir in /sw; do
-			if _is_loadable_dir "$basedir/$i"; then
+			if __syz::is_loadable_dir "$basedir/$i"; then
 				echo "Loading module $basedir/$i"
 				# FIXME: if already loaded, swap versions
 				# actually load it
@@ -126,7 +126,7 @@ function syz_load {
 				local subdir
 				for subdir in "${subdirs[@]}"; do
 					if [ -d "$basedir/$i/$subdir" ]; then
-						process_dir load "$subdir" "$basedir/$i/$subdir"
+						__syz::process_dir load "$subdir" "$basedir/$i/$subdir"
 					fi
 				done
 				# remember that this is loaded
@@ -156,7 +156,7 @@ function syz_install {
 
 
 function syz_isloaded {
-	if _isloaded "$1" _actually_loaded; then
+	if __syz::isloaded "$1" _actually_loaded; then
 		echo "$_actually_loaded: loaded"
 	else
 		echo "$1: not loaded"
@@ -169,7 +169,7 @@ function syz_unload {
 	local rc=0
 	local i
 	for i; do
-		if ! _isloaded "$i" _actually_loaded; then
+		if ! __syz::isloaded "$i" _actually_loaded; then
 			echo "syz: Error: No module named $i is loaded"
 			continue
 		fi
@@ -179,7 +179,7 @@ function syz_unload {
 		# not a real/actual module name).
 		local found=
 		for basedir in /sw; do
-			if _is_loadable_dir "$basedir/$_actually_loaded"; then
+			if __syz::is_loadable_dir "$basedir/$_actually_loaded"; then
 				echo "Unloading module $basedir/$_actually_loaded"
 				# actually unload it
 				# FIXME: use .syzrc if present
@@ -187,7 +187,7 @@ function syz_unload {
 				local subdir
 				for subdir in "${subdirs[@]}"; do
 					# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
-					process_dir unload "$subdir" "$basedir/$_actually_loaded/$subdir"
+					__syz::process_dir unload "$subdir" "$basedir/$_actually_loaded/$subdir"
 				done
 				# forget that this was loaded
 				remove_path SYZ_MODULES "$_actually_loaded"
@@ -200,7 +200,7 @@ function syz_unload {
 			continue
 		fi
 		# YIKES
-		# Module has been loaded, but now fails _is_loadable_dir.
+		# Module has been loaded, but now fails __syz::is_loadable_dir.
 		# This is an "orphaned" module.
 		# The files have actually been removed from the previous location on disk, oh well, too bad so sad.
 		# 
@@ -220,7 +220,7 @@ function syz_avail {
 	# FIXME: accept an arg which is a prefix-match to limit things to (defaults to "")
 	# FIXME: accept multiple args
 	local basedir
-	_set_nullglob
+	__syz::set_nullglob
 	for basedir in /sw; do
 		local pkgdir
 		for pkgdir in "$basedir"/*; do
@@ -252,7 +252,7 @@ function syz_avail {
 					: # ignore
 				elif [ "$version" = default -a "$default" ]; then
 					: # ignore
-				elif _is_loadable_dir "$versiondir"; then
+				elif __syz::is_loadable_dir "$versiondir"; then
 					local suffix=""
 					if [ "$current" = "$version" ]; then
 						suffix+=" (current)"
@@ -266,8 +266,8 @@ function syz_avail {
 				fi
 			done
 		done
-	done | _columnate
-	_restore_nullglob
+	done | __syz::columnate
+	__syz::restore_nullglob
 }
 
 
@@ -294,23 +294,23 @@ function syz_version {
 
 
 function prepend_path {
-	_adjust_list_var prepend : "$@"
+	__syz::adjust_list_var prepend : "$@"
 }
 
 
 function append_path {
-	_adjust_list_var append : "$@"
+	__syz::adjust_list_var append : "$@"
 }
 
 
 function bin_dir {
 	#prepend_path PATH "$@"
 	#FIXME: deal better with $mode
-	process_dir "$mode" bin "$@"
+	__syz::process_dir "$mode" bin "$@"
 }
 
 function remove_path {
-	_remove_list_var : "$@"
+	__syz::remove_list_var : "$@"
 }
 
 
@@ -338,7 +338,7 @@ function __syz::rerun_if_updated {
 }
 
 
-function process_dir {
+function __syz::process_dir {
 	local mode="$1" ; shift
 	local type="$1" ; shift
 	case "$mode" in
@@ -376,10 +376,10 @@ function process_dir {
 }
 
 
-function _isloaded {
+function __syz::isloaded {
 	local looking_for="$1" ; shift
 	local ${1+-n} found="$1" ; shift
-	_parse_list _loaded "$SYZ_MODULES"
+	__syz::parse_list _loaded "$SYZ_MODULES"
 	local i
 	local rc=1
 	for i in "${_loaded[@]}"; do
@@ -397,19 +397,19 @@ function _isloaded {
 
 
 declare -a _syz_nullglob_stack
-function _set_nullglob {
+function __syz::set_nullglob {
 	_syz_nullglob_stack+=("$(shopt -p nullglob)")
 	shopt -s nullglob
 }
 
 
-function _restore_nullglob {
+function __syz::restore_nullglob {
 	eval "${_syz_nullglob_stack[${#_syz_nullglob_stack[@]}-1]}"
 	unset _syz_nullglob_stack[${#_syz_nullglob_stack[@]}-1]
 }
 
 
-function _columnate {
+function __syz::columnate {
 	# FIXME: allow the user to override
 	if tty -s 0<&1; then
 		cat "$@" | awk 'NF > 0 { printf("%s) %s\n", NR, $0); }' | column
@@ -419,7 +419,7 @@ function _columnate {
 }
 
 
-function _is_loadable_dir {
+function __syz::is_loadable_dir {
 	# check for a valid subdir or .syzrc
 	# FIXME: .syzrc in the parent dir is also acceptable
 	if [ -r "$1/.syzrc" ]; then
@@ -435,7 +435,7 @@ function _is_loadable_dir {
 }
 
 
-function _parse_list {
+function __syz::parse_list {
 	local delim=:
 	if [ x"$1" = x"-d" ]; then
 		delim="$2"
@@ -454,7 +454,7 @@ function _parse_list {
 }
 
 
-function _stringify_array {
+function __syz::stringify_array {
 	local delim=:
 	if [ x"$1" = x"-d" ]; then
 		delim="$2"
@@ -471,18 +471,18 @@ function _stringify_array {
 }
 
 
-function _absolutify {
+function __syz::absolutify {
 	echo "$1"
 }
 
 
-function _adjust_list_var {
+function __syz::adjust_list_var {
 	local type="$1" ; shift
 	local sep="$1" ; shift
 	local var="$1" ; shift
 	local i
 	for i; do
-		i="$(_absolutify "$i")"
+		i="$(__syz::absolutify "$i")"
 		case "${!var}" in
 			*"$sep$i$sep"*)  ;;  # Already present
 			     "$i$sep"*)  ;;  # Already present
@@ -499,12 +499,12 @@ function _adjust_list_var {
 }
 
 
-function _remove_list_var {
+function __syz::remove_list_var {
 	local sep="$1" ; shift
 	local var="$1" ; shift
 	local i
 	for i; do
-		i="$(_absolutify "$i")"
+		i="$(__syz::absolutify "$i")"
 		case "${!var}" in
 			*"$sep$i$sep"*) declare -gx "$var"="${!var/$sep$i$sep/$sep}" ;;
 			     "$i$sep"*) declare -gx "$var"="${!var/#$i$sep}" ;;
