@@ -13,8 +13,6 @@ SYZ_VERSION=0.0.1
 
 # FIXME: test suite which exercises all the user-facing functions
 
-# FIXME: internal user functions as syz::functionname
-# FIXME: internal functions as __syz::functionname
 # FIXME: internal variables as __syz_varname
 # FIXME: external variables as SYZ_VARNAME
 
