@@ -36,7 +36,7 @@ function syz::dispatch {
 	local cmd="$1" ; shift
 	# FIXME: call syz::empty if cmd is empty
 	# FIXME: call syz::unknown if syz_$cmd doesn't exist
-	syz_"$cmd" "$@"
+	syz::"$cmd" "$@"
 }
 
 
