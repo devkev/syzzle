@@ -325,7 +325,7 @@ function remove_path {
 
 function __syz::rerun_if_updated {
 	# FIXME: use a hash of the file contents instead
-	local modtime="$(stat -c '%Y' "$SYZ_SOURCE")"
+	local modtime="$(stat -L -c '%Y' "$SYZ_SOURCE")"
 	if [ "$SYZ_SOURCED_AT" -a "$modtime" -a "$modtime" -gt "$SYZ_SOURCED_AT" ]; then
 		echo "syz: updated, auto-reloading..." 1>&2
 		echo 1>&2
