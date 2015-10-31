@@ -11,8 +11,8 @@ SYZ_VERSION=0.0.1
 
 
 
-# FIXME: internal user functions as syz:functionname
-# FIXME: internal functions as _syz:functionname
+# FIXME: internal user functions as syz::functionname
+# FIXME: internal functions as __syz::functionname
 # FIXME: internal variables as __syz_varname
 # FIXME: external variables as SYZ_VARNAME
 
@@ -26,7 +26,7 @@ SYZ_VERSION=0.0.1
 
 
 function syz {
-	if ! _syz_rerun_if_updated "$@"; then
+	if ! __syz::rerun_if_updated "$@"; then
 		syz_dispatch "$@"
 	fi
 }
@@ -321,7 +321,7 @@ function remove_path {
 ##################################################
 
 
-function _syz_rerun_if_updated {
+function __syz::rerun_if_updated {
 	# FIXME: use a hash of the file contents instead
 	local modtime="$(stat -c '%Y' "$SYZ_SOURCE")"
 	if [ "$SYZ_SOURCED_AT" -a "$modtime" -a "$modtime" -gt "$SYZ_SOURCED_AT" ]; then
