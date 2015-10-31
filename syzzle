@@ -114,6 +114,7 @@ function syz::load {
 		fi
 		# FIXME: if no trailing "/*", then figure out the default version
 		local found=
+		# FIXME: un-hardcode /sw
 		for basedir in /sw; do
 			if __syz::is_loadable_dir "$basedir/$i"; then
 				echo "Loading module $basedir/$i"
@@ -176,6 +177,7 @@ function syz::unload {
 		# "mongodb/2.4.0" is what should be removed, not "mongodb" (which is
 		# not a real/actual module name).
 		local found=
+		# FIXME: un-hardcode /sw
 		for basedir in /sw; do
 			if __syz::is_loadable_dir "$basedir/$_actually_loaded"; then
 				echo "Unloading module $basedir/$_actually_loaded"
@@ -219,6 +221,7 @@ function syz::avail {
 	# FIXME: accept multiple args
 	local basedir
 	__syz::set_nullglob
+	# FIXME: un-hardcode /sw
 	for basedir in /sw; do
 		local pkgdir
 		for pkgdir in "$basedir"/*; do
