@@ -1,0 +1,482 @@
+# .syzzle
+
+if [ "${_SYZ_SOURCE+set}" = set ]; then
+	return
+fi
+_SYZ_SOURCE="${BASH_SOURCE[0]}"
+# FIXME: use a hash of the file contents instead
+_SYZ_SOURCED_AT="$(date +%s)"
+
+_SYZ_VERSION=0.0.1
+
+_nl='
+'
+
+if [ "${SYZ_MODULES+set}" != set ]; then
+	SYZ_MODULES=""
+	declare -x SYZ_MODULES
+	SYZ_MODULES_ABS=""
+	declare -x SYZ_MODULES_ABS
+	SYZ_INACTIVE_MODULES=""
+	declare -x SYZ_INACTIVE_MODULES
+fi
+
+
+function syz {
+	if ! _syz_rerun_if_updated "$@"; then
+		syz_dispatch "$@"
+	fi
+}
+
+# FIXME: internal user functions as syz:functionname
+# FIXME: internal functions as _syz:functionname
+# FIXME: internal variables as __syz_varname
+# FIXME: external variables as SYZ_VARNAME
+
+function _syz_rerun_if_updated {
+	# FIXME: use a hash of the file contents instead
+	local modtime="$(stat -c '%Y' "$_SYZ_SOURCE")"
+	if [ "$_SYZ_SOURCED_AT" -a "$modtime" -a "$modtime" -gt "$_SYZ_SOURCED_AT" ]; then
+		echo "syz: updated, auto-reloading..." 1>&2
+		echo 1>&2
+		syz_reload
+		# FIXME: the re-call of self should be done by the caller, who can simply do "$0" "$@"
+		syz "$@"
+		return 0
+	fi
+	return 1
+}
+
+function syz_dispatch {
+	local cmd="$1" ; shift
+	# FIXME: call syz_empty if cmd is empty
+	# FIXME: call syz_unknown if syz_$cmd doesn't exist
+	syz_"$cmd" "$@"
+}
+
+# Default function when an unknown sub-command is attempted to be run
+function syz_unknown {
+	# FIXME: customisable action
+	# FIXME: better error message if syz_$cmd doesn't exist
+	# FIXME: default action if syz_$cmd doesn't exist should be "load", eg. "syz mongodb/2.6.11" equiv to "syz load mongodb/2.6.11"
+	syz_load "$@"
+}
+
+# Default function when just "syz" is run
+function syz_ {
+	syz_empty
+}
+
+function syz_empty {
+	# FIXME: customisable action
+	syz_show
+}
+
+function syz_show {
+	syz_status "$@"
+}
+
+function syz_status {
+	echo "Currently loaded modules:"
+	echo "-------------------------"
+	echo
+	syz_loaded "$@"
+	echo
+
+	if [ "$SYZ_INACTIVE_MODULES" ]; then
+		echo
+		echo "Inactive modules:"
+		echo "-----------------"
+		echo
+		syz_inactive "$@"
+		echo
+	fi
+}
+
+function syz_loaded {
+	# FIXME: identify orphaned modules and display them differently/separately.
+	# Oprhaned modules are those that have been loaded, but now fail _is_loadable_dir.
+	_parse_list _loaded "$SYZ_MODULES"
+	_stringify_array -d "$_nl" _loaded_str _loaded
+	_columnate <<< "$_loaded_str"
+	unset _loaded _loaded_str
+}
+
+function syz_inactive {
+	_parse_list _loaded "$SYZ_INACTIVE_MODULES"
+	_stringify_array -d "$_nl" _loaded_str _loaded
+	_columnate <<< "$_loaded_str"
+	unset _loaded _loaded_str
+}
+
+declare -a subdirs
+subdirs+=(bin)
+subdirs+=(lib)
+subdirs+=(man)
+subdirs+=(share/man)
+subdirs+=(share/pkgconfig)
+subdirs+=(sw)
+
+function process_dir {
+	local mode="$1" ; shift
+	local type="$1" ; shift
+	case "$mode" in
+		load)
+			case "$type" in
+				bin)
+					prepend_path PATH "$@"
+					;;
+				lib)
+					;;
+				share/man|man)
+					;;
+				share/pkgconfig)
+					;;
+				sw)
+					;;
+			esac
+			;;
+		unload)
+			case "$type" in
+				bin)
+					remove_path PATH "$@"
+					;;
+				lib)
+					;;
+				share/man|man)
+					;;
+				share/pkgconfig)
+					;;
+				sw)
+					;;
+			esac
+			;;
+	esac
+}
+
+
+function syz_load {
+	local rc=0
+	local i
+	for i; do
+		# FIXME: strip any trailing "/*" when doing this check
+		if _isloaded "$i" _actually_loaded; then
+			# FIXME: maybe force reload (ie. unload then reload) it in this case?
+			echo "Module $_actually_loaded is already loaded, skipping"
+			continue
+		fi
+		# FIXME: if no trailing "/*", then figure out the default version
+		local found=
+		for basedir in /sw; do
+			if _is_loadable_dir "$basedir/$i"; then
+				echo "Loading module $basedir/$i"
+				# FIXME: if already loaded, swap versions
+				# actually load it
+				# FIXME: use .syzrc if present
+				# FIXME: use a .syzrc from the parent dir if present
+				local subdir
+				for subdir in "${subdirs[@]}"; do
+					if [ -d "$basedir/$i/$subdir" ]; then
+						process_dir load "$subdir" "$basedir/$i/$subdir"
+					fi
+				done
+				# remember that this is loaded
+				append_path SYZ_MODULES "$i"
+				append_path SYZ_MODULES_ABS "$basedir/$i"
+				found=y
+				break
+			fi
+		done
+		if [ "$found" ]; then
+			continue
+		fi
+		# FIXME: try to install it?
+		echo "syz: No such module: $i"
+		rc=1
+	done
+	unset _actually_loaded
+	return "$rc"
+}
+
+function syz_install {
+	# FIXME: download binaries and put into place
+	# FIXME: possibly compile
+	:
+}
+
+function _isloaded {
+	local looking_for="$1" ; shift
+	local ${1+-n} found="$1" ; shift
+	_parse_list _loaded "$SYZ_MODULES"
+	local i
+	local rc=1
+	for i in "${_loaded[@]}"; do
+		case "$i" in
+			"$looking_for"|"$looking_for"/*)
+				found="$i"
+				rc=0
+				break
+				;;
+		esac
+	done
+	unset _loaded
+	return "$rc"
+}
+
+function syz_isloaded {
+	if _isloaded "$1" _actually_loaded; then
+		echo "$_actually_loaded: loaded"
+	else
+		echo "$1: not loaded"
+	fi
+	unset _actually_loaded
+}
+
+function syz_unload {
+	local rc=0
+	local i
+	for i; do
+		if ! _isloaded "$i" _actually_loaded; then
+			echo "syz: Error: No module named $i is loaded"
+			continue
+		fi
+		# use the full loaded module name. eg. mongodb/2.4.0 is loaded, user
+		# does "unload mongodb", we need to be smart enough to figure out that
+		# "mongodb/2.4.0" is what should be removed, not "mongodb" (which is
+		# not a real/actual module name).
+		local found=
+		for basedir in /sw; do
+			if _is_loadable_dir "$basedir/$_actually_loaded"; then
+				echo "Unloading module $basedir/$_actually_loaded"
+				# actually unload it
+				# FIXME: use .syzrc if present
+				# FIXME: use a .syzrc from the parent dir if present
+				local subdir
+				for subdir in "${subdirs[@]}"; do
+					# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
+					process_dir unload "$subdir" "$basedir/$_actually_loaded/$subdir"
+				done
+				# forget that this was loaded
+				remove_path SYZ_MODULES "$_actually_loaded"
+				remove_path SYZ_MODULES_ABS "$basedir/$_actually_loaded"
+				found=y
+				break
+			fi
+		done
+		if [ "$found" ]; then
+			continue
+		fi
+		# YIKES
+		# Module has been loaded, but now fails _is_loadable_dir.
+		# This is an "orphaned" module.
+		# The files have actually been removed from the previous location on disk, oh well, too bad so sad.
+		# 
+		# This is similar to "inactive" modules.
+		# This is where $SYZ_PATH has been adjusted such that the module can no longer be resolved.
+		# The module gets auto-unloaded at that point, and moved from $SYZ_MODULES to $SYZ_INACTIVE_MODULES.
+		# When $SYZ_PATH gets added to, any inactive modules that can now be resolved, will be auto loaded.
+		echo "syz: No such module: $i"
+		rc=1
+	done
+	unset _actually_loaded
+	return "$rc"
+}
+
+declare -a _syz_nullglob_stack
+function _set_nullglob {
+	_syz_nullglob_stack+=("$(shopt -p nullglob)")
+	shopt -s nullglob
+}
+function _restore_nullglob {
+	eval "${_syz_nullglob_stack[${#_syz_nullglob_stack[@]}-1]}"
+	unset _syz_nullglob_stack[${#_syz_nullglob_stack[@]}-1]
+}
+
+function syz_avail {
+	# FIXME: accept an arg which is a prefix-match to limit things to (defaults to "")
+	# FIXME: accept multiple args
+	local basedir
+	_set_nullglob
+	for basedir in /sw; do
+		local pkgdir
+		for pkgdir in "$basedir"/*; do
+			local pkgname="${pkgdir#$basedir/}"
+
+			# check for current and default
+			local current=""
+			if [ -L "$pkgdir/current" ]; then
+				currentdir="$(readlink -f "$pkgdir/current")"
+				if [ -d "$currentdir" ]; then
+					current="$(readlink "$pkgdir/current")"
+				fi
+			fi
+
+			local default=""
+			if [ -L "$pkgdir/default" ]; then
+				defaultdir="$(readlink -f "$pkgdir/default")"
+				if [ -d "$defaultdir" ]; then
+					default="$(readlink "$pkgdir/default")"
+				fi
+			fi
+
+			local versiondir
+			for versiondir in "$pkgdir"/*; do
+				local version="${versiondir#$pkgdir/}"
+
+
+				if [ "$version" = current -a "$current" ]; then
+					: # ignore
+				elif [ "$version" = default -a "$default" ]; then
+					: # ignore
+				elif _is_loadable_dir "$versiondir"; then
+					local suffix=""
+					if [ "$current" = "$version" ]; then
+						suffix+=" (current)"
+					elif [ "$default" = "$version" ]; then
+						suffix+=" (default)"
+					fi
+					echo "$pkgname/$version$suffix"
+				else
+					# not loadable
+					: # ignore
+				fi
+			done
+		done
+	done | _columnate
+	_restore_nullglob
+}
+
+function _columnate {
+	# FIXME: allow the user to override
+	if tty -s 0<&1; then
+		cat "$@" | awk 'NF > 0 { printf("%s) %s\n", NR, $0); }' | column
+	else
+		cat "$@"
+	fi
+}
+
+function syz_reload {
+	# FIXME: ideally clean up and remove all the private functions also
+	local src="$_SYZ_SOURCE"
+	unset _SYZ_SOURCE
+	. "$src"
+}
+
+function syz_version {
+	echo "syz version $_SYZ_VERSION"
+}
+
+
+function _is_loadable_dir {
+	# check for a valid subdir or .syzrc
+	# FIXME: .syzrc in the parent dir is also acceptable
+	if [ -r "$1/.syzrc" ]; then
+		return 0
+	fi
+	local i
+	for i in "${subdirs[@]}"; do
+		if [ -d "$1/$i" ]; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+function _parse_list {
+	local delim=:
+	if [ x"$1" = x"-d" ]; then
+		delim="$2"
+		shift 2
+	fi
+	local old_IFS="$IFS"
+	IFS="$delim"
+	declare -ag "$1=()"
+	local i
+	for i in $2; do
+		declare -ag "$1+=($i)"
+	done
+	local rc="$?"
+	IFS="$old_IFS"
+	return "$rc"
+}
+
+function _stringify_array {
+	local delim=:
+	if [ x"$1" = x"-d" ]; then
+		delim="$2"
+		shift 2
+	fi
+	local output="$1" ; shift
+	local -n array="$1" ; shift
+	local old_IFS="$IFS"
+	IFS="$delim"
+	declare -g "$output=${array[*]}"
+	local rc="$?"
+	IFS="$old_IFS"
+	return "$rc"
+}
+
+
+function _absolutify {
+	echo "$1"
+}
+
+function _adjust_list_var {
+	local type="$1" ; shift
+	local sep="$1" ; shift
+	local var="$1" ; shift
+	local i
+	for i; do
+		i="$(_absolutify "$i")"
+		case "${!var}" in
+			*"$sep$i$sep"*)  ;;  # Already present
+			     "$i$sep"*)  ;;  # Already present
+			*"$sep$i")       ;;  # Already present
+			     "$i")       ;;  # Already present
+			*)
+				case "$type" in
+					prepend) declare -gx "$var"="$i${!var:+$sep}${!var}" ;;
+					append)  declare -gx "$var"="${!var}${!var:+$sep}$i" ;;
+				esac
+				;;
+		esac
+	done
+}
+
+
+function prepend_path {
+	_adjust_list_var prepend : "$@"
+}
+
+function append_path {
+	_adjust_list_var append : "$@"
+}
+
+function bin_dir {
+	#prepend_path PATH "$@"
+	#FIXME: deal better with $mode
+	process_dir "$mode" bin "$@"
+}
+
+
+function _remove_list_var {
+	local sep="$1" ; shift
+	local var="$1" ; shift
+	local i
+	for i; do
+		i="$(_absolutify "$i")"
+		case "${!var}" in
+			*"$sep$i$sep"*) declare -gx "$var"="${!var/$sep$i$sep/$sep}" ;;
+			     "$i$sep"*) declare -gx "$var"="${!var/#$i$sep}" ;;
+			*"$sep$i")      declare -gx "$var"="${!var/%$sep$i}" ;;
+			     "$i")      declare -gx "$var"="" ;;
+			*)  ;;  # Not present
+		esac
+	done
+}
+
+function remove_path {
+	_remove_list_var : "$@"
+}
+
+
