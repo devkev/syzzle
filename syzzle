@@ -123,7 +123,7 @@ function syz::load {
 				# FIXME: use .syzrc if present
 				# FIXME: use a .syzrc from the parent dir if present
 				local subdir
-				for subdir in "${subdirs[@]}"; do
+				for subdir in "${__syz_subdirs[@]}"; do
 					if [ -d "$basedir/$i/$subdir" ]; then
 						__syz::process_dir load "$subdir" "$basedir/$i/$subdir"
 					fi
@@ -185,7 +185,7 @@ function syz::unload {
 				# FIXME: use .syzrc if present
 				# FIXME: use a .syzrc from the parent dir if present
 				local subdir
-				for subdir in "${subdirs[@]}"; do
+				for subdir in "${__syz_subdirs[@]}"; do
 					# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
 					__syz::process_dir unload "$subdir" "$basedir/$_actually_loaded/$subdir"
 				done
@@ -397,16 +397,16 @@ function __syz::isloaded {
 }
 
 
-declare -a _syz_nullglob_stack
+declare -a __syz_nullglob_stack
 function __syz::set_nullglob {
-	_syz_nullglob_stack+=("$(shopt -p nullglob)")
+	__syz_nullglob_stack+=("$(shopt -p nullglob)")
 	shopt -s nullglob
 }
 
 
 function __syz::restore_nullglob {
-	eval "${_syz_nullglob_stack[${#_syz_nullglob_stack[@]}-1]}"
-	unset _syz_nullglob_stack[${#_syz_nullglob_stack[@]}-1]
+	eval "${__syz_nullglob_stack[${#__syz_nullglob_stack[@]}-1]}"
+	unset __syz_nullglob_stack[${#__syz_nullglob_stack[@]}-1]
 }
 
 
@@ -427,7 +427,7 @@ function __syz::is_loadable_dir {
 		return 0
 	fi
 	local i
-	for i in "${subdirs[@]}"; do
+	for i in "${__syz_subdirs[@]}"; do
 		if [ -d "$1/$i" ]; then
 			return 0
 		fi
@@ -548,13 +548,13 @@ __syz_nl='
 '
 
 
-declare -a subdirs
-subdirs+=(bin)
-subdirs+=(lib)
-subdirs+=(man)
-subdirs+=(share/man)
-subdirs+=(share/pkgconfig)
-subdirs+=(sw)
+declare -a __syz_subdirs
+__syz_subdirs+=(bin)
+__syz_subdirs+=(lib)
+__syz_subdirs+=(man)
+__syz_subdirs+=(share/man)
+__syz_subdirs+=(share/pkgconfig)
+__syz_subdirs+=(sw)
 
 
 
