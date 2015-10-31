@@ -1,25 +1,28 @@
 # .syzzle
 
-if [ "${_SYZ_SOURCE+set}" = set ]; then
+if [ "${SYZ_SOURCE+set}" = set ]; then
 	return
 fi
-_SYZ_SOURCE="${BASH_SOURCE[0]}"
+SYZ_SOURCE="${BASH_SOURCE[0]}"
 # FIXME: use a hash of the file contents instead
-_SYZ_SOURCED_AT="$(date +%s)"
+SYZ_SOURCED_AT="$(date +%s)"
 
-_SYZ_VERSION=0.0.1
+SYZ_VERSION=0.0.1
 
-_nl='
-'
 
-if [ "${SYZ_MODULES+set}" != set ]; then
-	SYZ_MODULES=""
-	declare -x SYZ_MODULES
-	SYZ_MODULES_ABS=""
-	declare -x SYZ_MODULES_ABS
-	SYZ_INACTIVE_MODULES=""
-	declare -x SYZ_INACTIVE_MODULES
-fi
+
+# FIXME: internal user functions as syz:functionname
+# FIXME: internal functions as _syz:functionname
+# FIXME: internal variables as __syz_varname
+# FIXME: external variables as SYZ_VARNAME
+
+
+
+##################################################
+##
+##  External (user facing) functions
+##
+##################################################
 
 
 function syz {
@@ -28,24 +31,6 @@ function syz {
 	fi
 }
 
-# FIXME: internal user functions as syz:functionname
-# FIXME: internal functions as _syz:functionname
-# FIXME: internal variables as __syz_varname
-# FIXME: external variables as SYZ_VARNAME
-
-function _syz_rerun_if_updated {
-	# FIXME: use a hash of the file contents instead
-	local modtime="$(stat -c '%Y' "$_SYZ_SOURCE")"
-	if [ "$_SYZ_SOURCED_AT" -a "$modtime" -a "$modtime" -gt "$_SYZ_SOURCED_AT" ]; then
-		echo "syz: updated, auto-reloading..." 1>&2
-		echo 1>&2
-		syz_reload
-		# FIXME: the re-call of self should be done by the caller, who can simply do "$0" "$@"
-		syz "$@"
-		return 0
-	fi
-	return 1
-}
 
 function syz_dispatch {
 	local cmd="$1" ; shift
@@ -53,6 +38,7 @@ function syz_dispatch {
 	# FIXME: call syz_unknown if syz_$cmd doesn't exist
 	syz_"$cmd" "$@"
 }
+
 
 # Default function when an unknown sub-command is attempted to be run
 function syz_unknown {
@@ -62,19 +48,23 @@ function syz_unknown {
 	syz_load "$@"
 }
 
+
 # Default function when just "syz" is run
 function syz_ {
 	syz_empty
 }
+
 
 function syz_empty {
 	# FIXME: customisable action
 	syz_show
 }
 
+
 function syz_show {
 	syz_status "$@"
 }
+
 
 function syz_status {
 	echo "Currently loaded modules:"
@@ -93,65 +83,22 @@ function syz_status {
 	fi
 }
 
+
 function syz_loaded {
 	# FIXME: identify orphaned modules and display them differently/separately.
 	# Oprhaned modules are those that have been loaded, but now fail _is_loadable_dir.
 	_parse_list _loaded "$SYZ_MODULES"
-	_stringify_array -d "$_nl" _loaded_str _loaded
+	_stringify_array -d "$__syz_nl" _loaded_str _loaded
 	_columnate <<< "$_loaded_str"
 	unset _loaded _loaded_str
 }
+
 
 function syz_inactive {
 	_parse_list _loaded "$SYZ_INACTIVE_MODULES"
-	_stringify_array -d "$_nl" _loaded_str _loaded
+	_stringify_array -d "$__syz_nl" _loaded_str _loaded
 	_columnate <<< "$_loaded_str"
 	unset _loaded _loaded_str
-}
-
-declare -a subdirs
-subdirs+=(bin)
-subdirs+=(lib)
-subdirs+=(man)
-subdirs+=(share/man)
-subdirs+=(share/pkgconfig)
-subdirs+=(sw)
-
-function process_dir {
-	local mode="$1" ; shift
-	local type="$1" ; shift
-	case "$mode" in
-		load)
-			case "$type" in
-				bin)
-					prepend_path PATH "$@"
-					;;
-				lib)
-					;;
-				share/man|man)
-					;;
-				share/pkgconfig)
-					;;
-				sw)
-					;;
-			esac
-			;;
-		unload)
-			case "$type" in
-				bin)
-					remove_path PATH "$@"
-					;;
-				lib)
-					;;
-				share/man|man)
-					;;
-				share/pkgconfig)
-					;;
-				sw)
-					;;
-			esac
-			;;
-	esac
 }
 
 
@@ -198,30 +145,13 @@ function syz_load {
 	return "$rc"
 }
 
+
 function syz_install {
 	# FIXME: download binaries and put into place
 	# FIXME: possibly compile
 	:
 }
 
-function _isloaded {
-	local looking_for="$1" ; shift
-	local ${1+-n} found="$1" ; shift
-	_parse_list _loaded "$SYZ_MODULES"
-	local i
-	local rc=1
-	for i in "${_loaded[@]}"; do
-		case "$i" in
-			"$looking_for"|"$looking_for"/*)
-				found="$i"
-				rc=0
-				break
-				;;
-		esac
-	done
-	unset _loaded
-	return "$rc"
-}
 
 function syz_isloaded {
 	if _isloaded "$1" _actually_loaded; then
@@ -231,6 +161,7 @@ function syz_isloaded {
 	fi
 	unset _actually_loaded
 }
+
 
 function syz_unload {
 	local rc=0
@@ -282,15 +213,6 @@ function syz_unload {
 	return "$rc"
 }
 
-declare -a _syz_nullglob_stack
-function _set_nullglob {
-	_syz_nullglob_stack+=("$(shopt -p nullglob)")
-	shopt -s nullglob
-}
-function _restore_nullglob {
-	eval "${_syz_nullglob_stack[${#_syz_nullglob_stack[@]}-1]}"
-	unset _syz_nullglob_stack[${#_syz_nullglob_stack[@]}-1]
-}
 
 function syz_avail {
 	# FIXME: accept an arg which is a prefix-match to limit things to (defaults to "")
@@ -346,6 +268,145 @@ function syz_avail {
 	_restore_nullglob
 }
 
+
+function syz_reload {
+	# FIXME: ideally clean up and remove all the private functions also
+	local src="$SYZ_SOURCE"
+	unset SYZ_SOURCE
+	. "$src"
+}
+
+
+function syz_version {
+	echo "syz version $SYZ_VERSION"
+}
+
+
+
+
+##################################################
+##
+##  Interface (syzrc) functions
+##
+##################################################
+
+
+function prepend_path {
+	_adjust_list_var prepend : "$@"
+}
+
+
+function append_path {
+	_adjust_list_var append : "$@"
+}
+
+
+function bin_dir {
+	#prepend_path PATH "$@"
+	#FIXME: deal better with $mode
+	process_dir "$mode" bin "$@"
+}
+
+function remove_path {
+	_remove_list_var : "$@"
+}
+
+
+
+
+##################################################
+##
+##  Internal functions
+##
+##################################################
+
+
+function _syz_rerun_if_updated {
+	# FIXME: use a hash of the file contents instead
+	local modtime="$(stat -c '%Y' "$SYZ_SOURCE")"
+	if [ "$SYZ_SOURCED_AT" -a "$modtime" -a "$modtime" -gt "$SYZ_SOURCED_AT" ]; then
+		echo "syz: updated, auto-reloading..." 1>&2
+		echo 1>&2
+		syz_reload
+		# FIXME: the re-call of self should be done by the caller, who can simply do "$0" "$@"
+		syz "$@"
+		return 0
+	fi
+	return 1
+}
+
+
+function process_dir {
+	local mode="$1" ; shift
+	local type="$1" ; shift
+	case "$mode" in
+		load)
+			case "$type" in
+				bin)
+					prepend_path PATH "$@"
+					;;
+				lib)
+					;;
+				share/man|man)
+					;;
+				share/pkgconfig)
+					;;
+				sw)
+					;;
+			esac
+			;;
+		unload)
+			case "$type" in
+				bin)
+					remove_path PATH "$@"
+					;;
+				lib)
+					;;
+				share/man|man)
+					;;
+				share/pkgconfig)
+					;;
+				sw)
+					;;
+			esac
+			;;
+	esac
+}
+
+
+function _isloaded {
+	local looking_for="$1" ; shift
+	local ${1+-n} found="$1" ; shift
+	_parse_list _loaded "$SYZ_MODULES"
+	local i
+	local rc=1
+	for i in "${_loaded[@]}"; do
+		case "$i" in
+			"$looking_for"|"$looking_for"/*)
+				found="$i"
+				rc=0
+				break
+				;;
+		esac
+	done
+	unset _loaded
+	return "$rc"
+}
+
+
+declare -a _syz_nullglob_stack
+function _set_nullglob {
+	_syz_nullglob_stack+=("$(shopt -p nullglob)")
+	shopt -s nullglob
+}
+
+
+function _restore_nullglob {
+	eval "${_syz_nullglob_stack[${#_syz_nullglob_stack[@]}-1]}"
+	unset _syz_nullglob_stack[${#_syz_nullglob_stack[@]}-1]
+}
+
+
 function _columnate {
 	# FIXME: allow the user to override
 	if tty -s 0<&1; then
@@ -353,17 +414,6 @@ function _columnate {
 	else
 		cat "$@"
 	fi
-}
-
-function syz_reload {
-	# FIXME: ideally clean up and remove all the private functions also
-	local src="$_SYZ_SOURCE"
-	unset _SYZ_SOURCE
-	. "$src"
-}
-
-function syz_version {
-	echo "syz version $_SYZ_VERSION"
 }
 
 
@@ -382,6 +432,7 @@ function _is_loadable_dir {
 	return 1
 }
 
+
 function _parse_list {
 	local delim=:
 	if [ x"$1" = x"-d" ]; then
@@ -399,6 +450,7 @@ function _parse_list {
 	IFS="$old_IFS"
 	return "$rc"
 }
+
 
 function _stringify_array {
 	local delim=:
@@ -420,6 +472,7 @@ function _stringify_array {
 function _absolutify {
 	echo "$1"
 }
+
 
 function _adjust_list_var {
 	local type="$1" ; shift
@@ -444,21 +497,6 @@ function _adjust_list_var {
 }
 
 
-function prepend_path {
-	_adjust_list_var prepend : "$@"
-}
-
-function append_path {
-	_adjust_list_var append : "$@"
-}
-
-function bin_dir {
-	#prepend_path PATH "$@"
-	#FIXME: deal better with $mode
-	process_dir "$mode" bin "$@"
-}
-
-
 function _remove_list_var {
 	local sep="$1" ; shift
 	local var="$1" ; shift
@@ -475,8 +513,45 @@ function _remove_list_var {
 	done
 }
 
-function remove_path {
-	_remove_list_var : "$@"
-}
+
+
+
+##################################################
+##
+##  Setup (remaining) external variables
+##
+##################################################
+
+
+if [ "${SYZ_MODULES+set}" != set ]; then
+	SYZ_MODULES=""
+	declare -x SYZ_MODULES
+	SYZ_MODULES_ABS=""
+	declare -x SYZ_MODULES_ABS
+	SYZ_INACTIVE_MODULES=""
+	declare -x SYZ_INACTIVE_MODULES
+fi
+
+
+
+##################################################
+##
+##  Setup internal variables
+##
+##################################################
+
+
+__syz_nl='
+'
+
+
+declare -a subdirs
+subdirs+=(bin)
+subdirs+=(lib)
+subdirs+=(man)
+subdirs+=(share/man)
+subdirs+=(share/pkgconfig)
+subdirs+=(sw)
+
 
 
