@@ -227,7 +227,7 @@ function syz::avail {
 				# check for current and default
 				local current=""
 				if [ -L "$pkgdir/current" ]; then
-					currentdir="$(readlink -f "$pkgdir/current")"
+					local currentdir="$(readlink -f "$pkgdir/current")"
 					if [ -d "$currentdir" ]; then
 						current="$(readlink "$pkgdir/current")"
 					fi
@@ -235,7 +235,7 @@ function syz::avail {
 
 				local default=""
 				if [ -L "$pkgdir/default" ]; then
-					defaultdir="$(readlink -f "$pkgdir/default")"
+					local defaultdir="$(readlink -f "$pkgdir/default")"
 					if [ -d "$defaultdir" ]; then
 						default="$(readlink "$pkgdir/default")"
 					fi
