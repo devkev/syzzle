@@ -216,63 +216,66 @@ function syz::avail {
 	# FIXME: accept multiple args
 	local basedir
 	local -a _modules=()
-	__syz::set_nullglob
-	# FIXME: un-hardcode /sw
-	for basedir in /sw; do
-		local pkgdir
-		for pkgdir in "$basedir"/*; do
-			local pkgname="${pkgdir#$basedir/}"
+	__syz::parse_list _syz_path "$SYZ_PATH"
+	if [ "$SYZ_PATH" ]; then
+		__syz::set_nullglob
+		for basedir in "${_syz_path[@]}"; do
+			local pkgdir
+			for pkgdir in "$basedir"/*; do
+				local pkgname="${pkgdir#$basedir/}"
 
-			# check for current and default
-			local current=""
-			if [ -L "$pkgdir/current" ]; then
-				currentdir="$(readlink -f "$pkgdir/current")"
-				if [ -d "$currentdir" ]; then
-					current="$(readlink "$pkgdir/current")"
+				# check for current and default
+				local current=""
+				if [ -L "$pkgdir/current" ]; then
+					currentdir="$(readlink -f "$pkgdir/current")"
+					if [ -d "$currentdir" ]; then
+						current="$(readlink "$pkgdir/current")"
+					fi
 				fi
-			fi
 
-			local default=""
-			if [ -L "$pkgdir/default" ]; then
-				defaultdir="$(readlink -f "$pkgdir/default")"
-				if [ -d "$defaultdir" ]; then
-					default="$(readlink "$pkgdir/default")"
+				local default=""
+				if [ -L "$pkgdir/default" ]; then
+					defaultdir="$(readlink -f "$pkgdir/default")"
+					if [ -d "$defaultdir" ]; then
+						default="$(readlink "$pkgdir/default")"
+					fi
 				fi
-			fi
 
-			local versiondir
-			for versiondir in "$pkgdir"/*; do
-				local version="${versiondir#$pkgdir/}"
+				local versiondir
+				for versiondir in "$pkgdir"/*; do
+					local version="${versiondir#$pkgdir/}"
 
-				if __syz::fancy_output; then
-					if [ "$version" = current -a "$current" ]; then
-						: # ignore
-					elif [ "$version" = default -a "$default" ]; then
-						: # ignore
-					elif __syz::is_loadable_dir "$versiondir"; then
-						local suffix=""
-						if [ "$current" = "$version" ]; then
-							suffix+=" (current)"
-						elif [ "$default" = "$version" ]; then
-							suffix+=" (default)"
+					if __syz::fancy_output; then
+						if [ "$version" = current -a "$current" ]; then
+							: # ignore
+						elif [ "$version" = default -a "$default" ]; then
+							: # ignore
+						elif __syz::is_loadable_dir "$versiondir"; then
+							local suffix=""
+							if [ "$current" = "$version" ]; then
+								suffix+=" (current)"
+							elif [ "$default" = "$version" ]; then
+								suffix+=" (default)"
+							fi
+							_modules+=("$pkgname/$version$suffix")
+						else
+							# not loadable
+							: # ignore
 						fi
-						_modules+=("$pkgname/$version$suffix")
 					else
-						# not loadable
-						: # ignore
+						if __syz::is_loadable_dir "$versiondir"; then
+							_modules+=("$pkgname/$version")
+						fi
 					fi
-				else
-					if __syz::is_loadable_dir "$versiondir"; then
-						_modules+=("$pkgname/$version")
-					fi
-				fi
+				done
 			done
 		done
-	done
-	__syz::restore_nullglob
+		__syz::restore_nullglob
+	fi
 	__syz::stringify_array -d "$__syz_nl" _str _modules
 	__syz::columnate "Available modules" "No modules available." <<< "$_str"
 	unset _str
+	unset _syzpath
 }
 
 
@@ -560,6 +563,11 @@ function __syz::remove_list_var {
 ##
 ##################################################
 
+
+if [ "${SYZ_PATH+set}" != set ]; then
+	SYZ_PATH="/sw"
+	declare -x SYZ_PATH
+fi
 
 if [ "${SYZ_MODULES+set}" != set ]; then
 	SYZ_MODULES=""
