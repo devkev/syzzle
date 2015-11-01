@@ -64,14 +64,18 @@ function syz::show {
 
 
 function syz::status {
-	echo "Currently loaded modules:"
-	echo "-------------------------"
-	echo
-	syz::loaded "$@"
-	echo
+	if [ "$SYZ_MODULES" ]; then
+		echo "Currently loaded modules:"
+		echo "-------------------------"
+		echo
+		syz::loaded "$@"
+		echo
+	else
+		echo "No modules currently loaded."
+		echo
+	fi
 
 	if [ "$SYZ_INACTIVE_MODULES" ]; then
-		echo
 		echo "Inactive modules:"
 		echo "-----------------"
 		echo
