@@ -64,23 +64,14 @@ function syz::show {
 
 
 function syz::status {
-	if [ "$SYZ_MODULES" ]; then
-		echo "Currently loaded modules:"
-		echo "-------------------------"
-		echo
-		syz::loaded "$@"
-		echo
-	else
-		echo "No modules currently loaded."
-		echo
-	fi
+	echo
+	syz::version
+	echo
+
+	syz::loaded "$@"
 
 	if [ "$SYZ_INACTIVE_MODULES" ]; then
-		echo "Inactive modules:"
-		echo "-----------------"
-		echo
 		syz::inactive "$@"
-		echo
 	fi
 }
 
@@ -90,7 +81,7 @@ function syz::loaded {
 	# Oprhaned modules are those that have been loaded, but now fail __syz::is_loadable_dir.
 	__syz::parse_list _loaded "$SYZ_MODULES"
 	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
-	__syz::columnate <<< "$_loaded_str"
+	__syz::columnate "Currently loaded modules" "No modules currently loaded." <<< "$_loaded_str"
 	unset _loaded _loaded_str
 }
 
@@ -98,7 +89,7 @@ function syz::loaded {
 function syz::inactive {
 	__syz::parse_list _loaded "$SYZ_INACTIVE_MODULES"
 	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
-	__syz::columnate <<< "$_loaded_str"
+	__syz::columnate "Inactive modules" "No inactive modules." <<< "$_loaded_str"
 	unset _loaded _loaded_str
 }
 
@@ -224,6 +215,7 @@ function syz::avail {
 	# FIXME: accept an arg which is a prefix-match to limit things to (defaults to "")
 	# FIXME: accept multiple args
 	local basedir
+	local -a _modules=()
 	__syz::set_nullglob
 	# FIXME: un-hardcode /sw
 	for basedir in /sw; do
@@ -252,27 +244,35 @@ function syz::avail {
 			for versiondir in "$pkgdir"/*; do
 				local version="${versiondir#$pkgdir/}"
 
-
-				if [ "$version" = current -a "$current" ]; then
-					: # ignore
-				elif [ "$version" = default -a "$default" ]; then
-					: # ignore
-				elif __syz::is_loadable_dir "$versiondir"; then
-					local suffix=""
-					if [ "$current" = "$version" ]; then
-						suffix+=" (current)"
-					elif [ "$default" = "$version" ]; then
-						suffix+=" (default)"
+				if __syz::fancy_output; then
+					if [ "$version" = current -a "$current" ]; then
+						: # ignore
+					elif [ "$version" = default -a "$default" ]; then
+						: # ignore
+					elif __syz::is_loadable_dir "$versiondir"; then
+						local suffix=""
+						if [ "$current" = "$version" ]; then
+							suffix+=" (current)"
+						elif [ "$default" = "$version" ]; then
+							suffix+=" (default)"
+						fi
+						_modules+=("$pkgname/$version$suffix")
+					else
+						# not loadable
+						: # ignore
 					fi
-					echo "$pkgname/$version$suffix"
 				else
-					# not loadable
-					: # ignore
+					if __syz::is_loadable_dir "$versiondir"; then
+						_modules+=("$pkgname/$version")
+					fi
 				fi
 			done
 		done
-	done | __syz::columnate
+	done
 	__syz::restore_nullglob
+	__syz::stringify_array -d "$__syz_nl" _str _modules
+	__syz::columnate "Available modules" "No modules available." <<< "$_str"
+	unset _str
 }
 
 
@@ -414,12 +414,43 @@ function __syz::restore_nullglob {
 }
 
 
-function __syz::columnate {
+function __syz::fancy_output {
 	# FIXME: allow the user to override
-	if tty -s 0<&1; then
-		cat "$@" | awk 'NF > 0 { printf("%s) %s\n", NR, $0); }' | column
+	# Fancy output for terminals, plain otherwise
+	tty -s 0<&1
+}
+
+function __syz::columnate {
+	local header="$1" ; shift
+	local emptymsg="$1" ; shift
+	local output="$(cat "$@")"
+	if __syz::fancy_output; then
+		if [ "$output" ]; then
+			if [ "$header" ]; then
+				echo
+				echo "$header"
+				echo "${header//?/-}-"
+				echo
+			fi
+			local numlines=0
+			local dummy
+			while read dummy; do
+				numlines=$(($numlines + 1))
+			done <<< "$output"
+			awk -v numlines="$numlines" 'NF > 0 { printf("%"length(numlines)"s) %s\n", NR, $0); }' <<< "$output" | column
+			if [ "$header" ]; then
+				echo
+			fi
+		else
+			if [ "$emptymsg" ]; then
+				echo "$emptymsg"
+				echo
+			fi
+		fi
 	else
-		cat "$@"
+		if [ "$output" ]; then
+			echo "$output"
+		fi
 	fi
 }
 
