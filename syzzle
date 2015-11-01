@@ -156,11 +156,14 @@ function syz::install {
 
 
 function syz::isloaded {
-	if __syz::isloaded "$1" _actually_loaded; then
-		echo "$_actually_loaded: loaded"
-	else
-		echo "$1: not loaded"
-	fi
+	local i
+	for i; do
+		if __syz::isloaded "$i" _actually_loaded; then
+			echo "$_actually_loaded: loaded"
+		else
+			echo "$i: not loaded"
+		fi
+	done
 	unset _actually_loaded
 }
 
