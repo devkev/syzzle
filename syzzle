@@ -280,7 +280,7 @@ function syz::avail {
 	__syz::stringify_array -d "$__syz_nl" _str _modules
 	__syz::columnate "Available modules" "No modules available." <<< "$_str"
 	unset _str
-	unset _syzpath
+	unset _syz_path
 }
 
 
