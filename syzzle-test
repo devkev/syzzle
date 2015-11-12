@@ -31,8 +31,15 @@ export SYZ_PATH="$basedir/sw"
 function run {
 	echo "+ ${FUNCNAME[0]} $*"
 	# FIXME: crap crap crap, need to capture output without spawning a subshell
-	o="$("$@")"
+	#exec 3>&1
+	{
+	# This approach doesn't work - the & causes a subshell, which is where o gets set (not here).
+	# Just mkfifo inside $basedir and use that.
+	o="$(cat 0<&3)" &
+	"$@" 3>&1
+	} 3>&1
 	rc="$?"
+	wait
 }
 
 function run_tty {
