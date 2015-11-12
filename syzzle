@@ -14,6 +14,19 @@ SYZ_VERSION=0.0.1
 # FIXME: test suite which exercises all the user-facing functions
 
 
+# FIXME: returning strings from functions by using global variables is efficient and all,
+# but super error prone (in terms of remembering to unset them correctly).
+# Figure something out to make this better. eg. just one point at which the variable is
+# declared to be "shared temporary global", and that automatically handles cleaning it up
+# when it's no longer needed.  Doing this while bash has no serious concept of scope will
+# be tricky.  Perhaps every function has a local array which stores the list of such
+# variables, and every function ends with an alias that unsets them all?
+# These stupid global vars also threaten function re-entracy, which might be a problem
+# when dealing with prereqs (ie. modules which cause other modules to be loaded).
+# Maybe another alias which automatically allocates a new global var, and sets up a local
+# alias var to it (local -n)?
+
+
 
 ##################################################
 ##
