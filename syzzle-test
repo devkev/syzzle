@@ -1,0 +1,53 @@
+#!/bin/bash
+
+#
+# Functional and unit tests for syz
+#
+
+
+if [ "$1" != real ]; then
+	unset SYZ_{PATH,MODULES,MODULES_ABS,INACTIVE_MODULES}
+	exec bash --norc "$0" real
+fi
+
+# Setup
+
+basedir=""
+trap 'rc="$?" ; set +ex ; if [ $rc = 0 ]; then echo "TESTS PASSED"; else echo "TESTS FAILED ($rc)"; fi ; [ "$basedir" ] && rm -rf "$basedir" ; exit $rc' EXIT
+basedir="$(mktemp -d)"
+
+mkdir -p "$basedir/sw/"{abc,def,ghi,jkl}/{1.0,1.1,1.2,1.3}/{bin,lib}
+export SYZ_PATH="$basedir/sw"
+
+
+function run {
+	echo "+ $*"
+	o="$("$@")"
+}
+
+function check_output {
+	local i
+	for i; do
+		echo "++ check_output $i" 
+		grep -q "$i" <<<"$o"
+	done
+}
+
+function check_env {
+	local var="$1" ; shift
+	local pattern="$1" ; shift
+	local -n value="$var"
+	echo "++ check_env $var $pattern" 
+	grep -q "$pattern" <<<"$value"
+}
+
+
+set -e
+
+. ./syzzle
+
+check_env "SYZ_VERSION" "."
+
+run syz version
+check_output "version" "$SYZ_VERSION"
+
