@@ -119,40 +119,35 @@ function syz::load {
 		# FIXME: strip any trailing "/*" when doing this check
 		if __syz::isloaded "$i" _actually_loaded; then
 			# FIXME: maybe force reload (ie. unload then reload) it in this case?
+			# FIXME: if already loaded, swap versions (ie. unload first)
 			echo "Module $_actually_loaded is already loaded, skipping"
 			continue
 		fi
-		# FIXME: if no trailing "/*", then figure out the default version
-		local found=
-		# FIXME: un-hardcode /sw
-		for basedir in /sw; do
-			if __syz::is_loadable_dir "$basedir/$i"; then
-				echo "Loading module $basedir/$i"
-				# FIXME: if already loaded, swap versions
-				# actually load it
-				# FIXME: use .syzrc if present
-				# FIXME: use a .syzrc from the parent dir if present
-				local subdir
-				for subdir in "${__syz_subdirs[@]}"; do
-					if [ -d "$basedir/$i/$subdir" ]; then
-						__syz::process_dir load "$subdir" "$basedir/$i/$subdir"
-					fi
-				done
-				# remember that this is loaded
-				append_path SYZ_MODULES "$i"
-				append_path SYZ_MODULES_ABS "$basedir/$i"
-				found=y
-				break
-			fi
-		done
-		if [ "$found" ]; then
-			continue
+
+		if __syz::resolve_loadable_dir "$i" _resolved_pv _resolved_dir; then
+			echo "Loading $_resolved_pv from $_resolved_dir"
+			# actually load it
+			# FIXME: this should be a function
+			# FIXME: use .syzrc if present
+			# FIXME: use a .syzrc from the parent dir if present
+			local subdir
+			for subdir in "${__syz_subdirs[@]}"; do
+				if [ -d "$_resolved_dir/$subdir" ]; then
+					__syz::process_dir load "$subdir" "$_resolved_dir/$subdir"
+				fi
+			done
+			# remember that this is loaded
+			append_path SYZ_MODULES "$_resolved_pv"
+			append_path SYZ_MODULES_ABS "$_resolved_dir"
+		else
+			# FIXME: try to install it?
+			echo "syz: No such module: $i"
+			rc=1
 		fi
-		# FIXME: try to install it?
-		echo "syz: No such module: $i"
-		rc=1
 	done
 	unset _actually_loaded
+	unset _resolved_pv
+	unset _resolved_dir
 	return "$rc"
 }
 
