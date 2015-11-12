@@ -636,3 +636,6 @@ __syz_subdirs+=(sw)
 
 
 
+# FIXME: source user's ~/.syzrc, if present
+
+
