@@ -16,12 +16,21 @@ basedir=""
 trap 'rc="$?" ; set +ex ; if [ $rc = 0 ]; then echo "ALL TESTS PASSED"; else echo "TEST FAILED ($rc)"; fi ; [ "$basedir" ] && rm -rf "$basedir" ; exit $rc' EXIT
 basedir="$(mktemp -d)"
 
-mkdir -p "$basedir/sw/"{abc,def,ghi,jkl}/{1.0,1.1,1.2,1.3}/{bin,lib}
+nl='
+'
+test_pvs=""
+for i in {abc,def,ghi,jkl}/{1.0,1.1,1.2,1.3}; do
+	mkdir -p "$basedir/sw/$i"/{bin,lib}
+	test_pvs="$test_pvs$i$nl"
+done
+test_pvs="${test_pvs%$nl}"
+echo "$test_pvs"
 export SYZ_PATH="$basedir/sw"
 
 
 function run {
 	echo "+ ${FUNCNAME[0]} $*"
+	# FIXME: crap crap crap, need to capture output without spawning a subshell
 	o="$("$@")"
 	rc="$?"
 }
@@ -31,6 +40,7 @@ function run_tty {
 	function tty {
 		:
 	}
+	# FIXME: crap crap crap, need to capture output without spawning a subshell
 	o="$("$@")"
 	rc="$?"
 	unset -f tty
@@ -151,6 +161,18 @@ o_show="$o"
 run syz status
 check success
 check output_exact "$o_show"
+
+run syz avail
+check success
+check output_exact "$test_pvs"
+
+run syz load abc/1.0
+check success
+check output_pattern 'Loading' 'abc/1.0'
+echo "$SYZ_MODULES"
+check envvar_pattern 'SYZ_MODULES' 'abc/1.0'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/1.0
+check envvar_pattern 'PATH' "$basedir"/sw/abc/1.0/bin
 
 
 
