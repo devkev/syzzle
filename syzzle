@@ -184,42 +184,39 @@ function syz::unload {
 		# does "unload mongodb", we need to be smart enough to figure out that
 		# "mongodb/2.4.0" is what should be removed, not "mongodb" (which is
 		# not a real/actual module name).
-		local found=
-		# FIXME: un-hardcode /sw
-		for basedir in /sw; do
-			if __syz::is_loadable_dir "$basedir/$_actually_loaded"; then
-				echo "Unloading module $basedir/$_actually_loaded"
-				# actually unload it
-				# FIXME: use .syzrc if present
-				# FIXME: use a .syzrc from the parent dir if present
-				local subdir
-				for subdir in "${__syz_subdirs[@]}"; do
-					# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
-					__syz::process_dir unload "$subdir" "$basedir/$_actually_loaded/$subdir"
-				done
-				# forget that this was loaded
-				remove_path SYZ_MODULES "$_actually_loaded"
-				remove_path SYZ_MODULES_ABS "$basedir/$_actually_loaded"
-				found=y
-				break
-			fi
-		done
-		if [ "$found" ]; then
-			continue
+
+		# FIXME: do not search for the right dir. instead, use the dir from $SYZ_MODULES_ABS
+		if __syz::resolve_loadable_dir "$_actually_loaded" _resolved_pv _resolved_dir; then
+			echo "Unloading $_resolved_pv from $_resolved_dir"
+			# actually unload it
+			# FIXME: this should be a function
+			# FIXME: use .syzrc if present
+			# FIXME: use a .syzrc from the parent dir if present
+			local subdir
+			for subdir in "${__syz_subdirs[@]}"; do
+				# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
+				__syz::process_dir unload "$subdir" "$_resolved_dir/$subdir"
+			done
+			# forget that this was loaded
+			remove_path SYZ_MODULES "$_resolved_pv"
+			remove_path SYZ_MODULES_ABS "$_resolved_dir"
+		else
+			# YIKES
+			# Module has been loaded, but now fails __syz::is_loadable_dir.
+			# This is an "orphaned" module.
+			# The files have actually been removed from the previous location on disk, oh well, too bad so sad.
+			#
+			# This is similar to "inactive" modules.
+			# This is where $SYZ_PATH has been adjusted such that the module can no longer be resolved.
+			# The module gets auto-unloaded at that point, and moved from $SYZ_MODULES to $SYZ_INACTIVE_MODULES.
+			# When $SYZ_PATH gets added to, any inactive modules that can now be resolved, will be auto loaded.
+			echo "syz: No such module: $i"
+			rc=1
 		fi
-		# YIKES
-		# Module has been loaded, but now fails __syz::is_loadable_dir.
-		# This is an "orphaned" module.
-		# The files have actually been removed from the previous location on disk, oh well, too bad so sad.
-		# 
-		# This is similar to "inactive" modules.
-		# This is where $SYZ_PATH has been adjusted such that the module can no longer be resolved.
-		# The module gets auto-unloaded at that point, and moved from $SYZ_MODULES to $SYZ_INACTIVE_MODULES.
-		# When $SYZ_PATH gets added to, any inactive modules that can now be resolved, will be auto loaded.
-		echo "syz: No such module: $i"
-		rc=1
 	done
 	unset _actually_loaded
+	unset _resolved_pv
+	unset _resolved_dir
 	return "$rc"
 }
 
