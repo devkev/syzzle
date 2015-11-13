@@ -15,6 +15,8 @@ fi
 basedir=""
 trap 'rc="$?" ; set +ex ; if [ $rc = 0 ]; then echo "ALL TESTS PASSED"; else echo "TEST FAILED ($rc)"; fi ; [ "$basedir" ] && rm -rf "$basedir" ; exit $rc' EXIT
 basedir="$(mktemp -d)"
+pipe="$basedir/pipe"
+mkfifo "$pipe"
 
 nl='
 '
@@ -35,6 +37,9 @@ function run {
 	{
 	# This approach doesn't work - the & causes a subshell, which is where o gets set (not here).
 	# Just mkfifo inside $basedir and use that.
+	# Named pipe won't work because it can't be read in the background (as above), and the pipes
+	# can only buffer so much data before they'll block.
+	# So just use a temp file.
 	o="$(cat 0<&3)" &
 	"$@" 3>&1
 	} 3>&1
