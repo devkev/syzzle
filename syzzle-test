@@ -15,8 +15,7 @@ fi
 basedir=""
 trap 'rc="$?" ; set +ex ; if [ $rc = 0 ]; then echo "ALL TESTS PASSED"; else echo "TEST FAILED ($rc)"; fi ; [ "$basedir" ] && rm -rf "$basedir" ; exit $rc' EXIT
 basedir="$(mktemp -d)"
-pipe="$basedir/pipe"
-mkfifo "$pipe"
+tmpfile="$basedir/tmpfile"
 
 nl='
 '
@@ -26,25 +25,15 @@ for i in {abc,def,ghi,jkl}/{1.0,1.1,1.2,1.3}; do
 	test_pvs="$test_pvs$i$nl"
 done
 test_pvs="${test_pvs%$nl}"
-echo "$test_pvs"
+#echo "$test_pvs"
 export SYZ_PATH="$basedir/sw"
 
 
 function run {
 	echo "+ ${FUNCNAME[0]} $*"
-	# FIXME: crap crap crap, need to capture output without spawning a subshell
-	#exec 3>&1
-	{
-	# This approach doesn't work - the & causes a subshell, which is where o gets set (not here).
-	# Just mkfifo inside $basedir and use that.
-	# Named pipe won't work because it can't be read in the background (as above), and the pipes
-	# can only buffer so much data before they'll block.
-	# So just use a temp file.
-	o="$(cat 0<&3)" &
-	"$@" 3>&1
-	} 3>&1
+	"$@" > "$tmpfile"
 	rc="$?"
-	wait
+	o="$(<"$tmpfile")"
 }
 
 function run_tty {
@@ -52,9 +41,9 @@ function run_tty {
 	function tty {
 		:
 	}
-	# FIXME: crap crap crap, need to capture output without spawning a subshell
-	o="$("$@")"
+	"$@" > "$tmpfile"
 	rc="$?"
+	o="$(<"$tmpfile")"
 	unset -f tty
 }
 
@@ -181,7 +170,6 @@ check output_exact "$test_pvs"
 run syz load abc/1.0
 check success
 check output_pattern 'Loading' 'abc/1.0'
-echo "$SYZ_MODULES"
 check envvar_pattern 'SYZ_MODULES' 'abc/1.0'
 check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/1.0
 check envvar_pattern 'PATH' "$basedir"/sw/abc/1.0/bin
