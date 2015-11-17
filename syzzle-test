@@ -477,9 +477,39 @@ check modules_not_loaded 'xyz/0.9'
 check no_modules_loaded
 check no_modules_inactive
 
+# trying to load module with unknown package name
+echo
+run syz load xyz
+check failure
+check output_pattern 'No such module: xyz'
+check envvar_not_pattern 'SYZ_MODULES' 'xyz'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/xyz
+check envvar_not_pattern 'PATH' "$basedir"/sw/xyz/bin
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check modules_not_loaded 'xyz'
+check no_modules_loaded
+check no_modules_inactive
+
+# trying to load module with unknown version
+echo
+run syz load abc/0.9
+check failure
+check output_pattern 'No such module: abc/0.9'
+check envvar_not_pattern 'SYZ_MODULES' 'abc/0.9'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/0.9
+check envvar_not_pattern 'PATH' "$basedir"/sw/abc/0.9/bin
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check modules_not_loaded 'abc/0.9'
+check no_modules_loaded
+check no_modules_inactive
 
 
-# FIXME: trying to load module with unknown version
 
 # FIXME: trying to unload module with unknown package name
 # FIXME: trying to unload module with unknown version
