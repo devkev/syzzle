@@ -225,6 +225,7 @@ check output_exact 'No modules available.'
 for i in $test_pvs; do
 	mkdir -p "$basedir/sw/$i"/{bin,lib}
 done
+# FIXME: current and default symlinks
 
 echo
 run syz avail
@@ -329,6 +330,19 @@ check modules_loaded 'ghi/1.2'
 check no_modules_inactive
 
 echo
+run syz load def/1.1
+check success
+check output_pattern 'Loading' 'def/1.1'
+check envvar_pattern 'SYZ_MODULES' 'def/1.1'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/def/1.1
+check envvar_pattern 'PATH' "$basedir"/sw/def/1.1/bin
+
+check modules_not_loaded 'abc/1.0'
+check modules_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+echo
 run syz unload ghi/1.2
 check success
 check output_pattern 'Unloading' 'ghi/1.2'
@@ -337,10 +351,62 @@ check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/ghi/1.2
 check envvar_not_pattern 'PATH' "$basedir"/sw/ghi/1.2/bin
 
 check modules_not_loaded 'abc/1.0'
+check modules_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_inactive
+
+echo
+run syz unload def/1.1
+check success
+check output_pattern 'Unloading' 'def/1.1'
+check envvar_not_pattern 'SYZ_MODULES' 'def/1.1'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/def/1.1
+check envvar_not_pattern 'PATH' "$basedir"/sw/def/1.1/bin
+
+check modules_not_loaded 'abc/1.0'
 check modules_not_loaded 'def/1.1'
 check modules_not_loaded 'ghi/1.2'
 check no_modules_loaded
 check no_modules_inactive
+
+echo
+run syz load ghi/1.2
+check success
+check output_pattern 'Loading' 'ghi/1.2'
+check envvar_pattern 'SYZ_MODULES' 'ghi/1.2'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/ghi/1.2
+check envvar_pattern 'PATH' "$basedir"/sw/ghi/1.2/bin
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+echo
+run syz load ghi/1.2
+check success
+check output_pattern 'Module ghi/1.2 is already loaded, skipping'
+check envvar_pattern 'SYZ_MODULES' 'ghi/1.2'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/ghi/1.2
+check envvar_pattern 'PATH' "$basedir"/sw/ghi/1.2/bin
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+
+
+# FIXME: trying to load module with unknown package name
+# FIXME: trying to load module with unknown version
+
+# FIXME: trying to unload module with unknown package name
+# FIXME: trying to unload module with unknown version
+
+# FIXME: trying to unload module which is known but not loaded
+
+# FIXME: loading multiple modules on one cmdline
+# FIXME: unloading multiple modules on one cmdline
 
 
 
