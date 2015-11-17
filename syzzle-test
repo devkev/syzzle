@@ -7,7 +7,7 @@
 
 if [ "$1" != real ]; then
 	unset SYZ_{PATH,MODULES,MODULES_ABS,INACTIVE_MODULES}
-	exec bash --norc "$0" real "$@"
+	exec time bash --norc "$0" real "$@"
 fi
 shift # eat the "real"
 
