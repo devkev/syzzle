@@ -7,8 +7,17 @@
 
 if [ "$1" != real ]; then
 	unset SYZ_{PATH,MODULES,MODULES_ABS,INACTIVE_MODULES}
-	exec bash --norc "$0" real
+	exec bash --norc "$0" real "$@"
 fi
+shift # eat the "real"
+
+for i; do
+	case "$i" in
+		-v)
+			verbose=y
+			;;
+	esac
+done
 
 # Setup
 
@@ -43,6 +52,14 @@ function run {
 	"$@" > "$tmpfile"
 	rc="$?"
 	o="$(<"$tmpfile")"
+	if [ "$verbose" = y ]; then
+		echo "$marker+ rc=$rc"
+		echo "$marker+ ---- start output ----"
+		if [ "$o" ]; then
+			echo "$o"
+		fi
+		echo "$marker+ ---- end output ----"
+	fi
 	unindent
 }
 
@@ -73,7 +90,7 @@ function check_success {
 }
 
 function check_failure {
-	local code="$1" ; shift
+	local code="$1"
 	echo "$marker ${FUNCNAME[0]} $code"
 	if [ "$code" ]; then
 		[ "$rc" = "$code" ]
@@ -432,7 +449,7 @@ check no_modules_inactive
 echo
 run syz unload abc/1.0
 check success
-check output_pattern 'syz: Error: No module named abc/1.0 is loaded'
+check output_pattern 'Error: No module named abc/1.0 is loaded'
 check envvar_not_pattern 'SYZ_MODULES' abc/1.0
 check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/1.0
 check envvar_not_pattern 'PATH' "$basedir"/sw/abc/1.0/bin
@@ -444,8 +461,24 @@ check no_modules_loaded
 check no_modules_inactive
 
 
+# trying to load module with unknown package name
+echo
+run syz load xyz/0.9
+check failure
+check output_pattern 'No such module: xyz/0.9'
+check envvar_not_pattern 'SYZ_MODULES' 'xyz/0.9'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/xyz/0.9
+check envvar_not_pattern 'PATH' "$basedir"/sw/xyz/0.9/bin
 
-# FIXME: trying to load module with unknown package name
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check modules_not_loaded 'xyz/0.9'
+check no_modules_loaded
+check no_modules_inactive
+
+
+
 # FIXME: trying to load module with unknown version
 
 # FIXME: trying to unload module with unknown package name
