@@ -21,7 +21,6 @@ nl='
 '
 test_pvs=""
 for i in {abc,def,ghi,jkl}/{1.0,1.1,1.2,1.3}; do
-	mkdir -p "$basedir/sw/$i"/{bin,lib}
 	test_pvs="$test_pvs$i$nl"
 done
 test_pvs="${test_pvs%$nl}"
@@ -216,6 +215,27 @@ check envvar_exact "SYZ_MODULES_ABS" ''
 check envvar_exact "SYZ_INACTIVE_MODULES" ''
 
 echo
+run syz avail
+check success
+check output_exact ''
+via_tty run syz avail
+check success
+check output_exact 'No modules available.'
+
+for i in $test_pvs; do
+	mkdir -p "$basedir/sw/$i"/{bin,lib}
+done
+
+echo
+run syz avail
+check success
+check output_exact "$test_pvs"
+via_tty run syz avail
+check success
+check output_pattern 'Available modules'
+check output_pattern $test_pvs
+
+echo
 run syz version
 check success
 check output_pattern "version" "$SYZ_VERSION"
@@ -235,12 +255,6 @@ o_show="$o"
 run syz status
 check success
 check output_exact "$o_show"
-
-echo
-run syz avail
-check success
-check output_exact "$test_pvs"
-# FIXME: via_tty
 
 echo
 check modules_not_loaded 'abc/1.0'
