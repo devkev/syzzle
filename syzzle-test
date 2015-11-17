@@ -47,15 +47,13 @@ function run {
 	unindent
 }
 
-function run_tty {
+function via_tty {
 	indent
 	echo "$marker ${FUNCNAME[0]} $*"
 	function tty {
 		:
 	}
-	"$@" > "$tmpfile"
-	rc="$?"
-	o="$(<"$tmpfile")"
+	"$@"
 	unset -f tty
 	unindent
 }
@@ -136,7 +134,7 @@ function check_no_modules_loaded {
 	run syz loaded
 	check success
 	check output_exact ""
-	run_tty syz loaded
+	via_tty run syz loaded
 	check success
 	check output_pattern 'No modules currently loaded\.'
 }
@@ -146,7 +144,7 @@ function check_no_modules_inactive {
 	run syz inactive
 	check success
 	check output_exact ""
-	run_tty syz inactive
+	via_tty run syz inactive
 	check success
 	check output_pattern 'No inactive modules\.'
 }
@@ -158,7 +156,7 @@ function check_modules_loaded {
 		run syz loaded
 		check success
 		check output_pattern "^$i$"
-		run_tty syz loaded
+		via_tty run syz loaded
 		check success
 		check output_pattern 'Currently loaded modules'
 		check output_pattern "\<$i\>"
