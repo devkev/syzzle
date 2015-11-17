@@ -45,12 +45,21 @@ declare -i __syz__global_var_n=0
 # There will also be a local variable of the same name but with '_name' appended, which is the global variable that "maps" to the local variable.
 # This is what should be passed to functions that want the name of a global variable in which to return stuff.
 # FIXME: WIP: the below is not yet finished.
-alias __syz::__declare_global_return_var='__syz__global_var_n="$__syz__global_var_n + 1" ; local -a _global_vars ; _global_vars+=("global_var_$__syz__global_var_n") ; declare -g "global_var_$__syz__global_var_n" ; local -n "$global_return_var"="global_var_$__syz__global_var_n" ; unset global_return_var'
+alias __syz::__declare_global_return_var='local "${global_return_var}_name"="global_var_$__syz__global_var_n" ; local -a _global_vars ; _global_vars+=("global_var_$__syz__global_var_n") ; declare -g "global_var_$__syz__global_var_n"="foo" ; local -n "$global_return_var"="global_var_$__syz__global_var_n" ; unset global_return_var ; __syz__global_var_n="$__syz__global_var_n + 1"'
+
+# FIXME: a trap to unset everything in ${_global_vars[@]} at every function end
 
 function syz::test {
 	echo "before num $__syz__global_var_n"
 	global_return_var="foobar" ; __syz::__declare_global_return_var
 	echo " after num $__syz__global_var_n"
+	echo "$foobar_name"
+	global_var_0="arglebargle"
+	echo "$global_var_0"
+	echo "$foobar"
+	foobar="blerk"
+	echo "$global_var_0"
+	echo "$foobar"
 }
 
 
@@ -668,5 +677,6 @@ __syz_subdirs+=(sw)
 
 
 eval "$__syz_expand_aliases_save"
+unset __syz_expand_aliases_save
 
 
