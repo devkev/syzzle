@@ -428,6 +428,21 @@ check modules_not_loaded 'ghi/1.2'
 check no_modules_loaded
 check no_modules_inactive
 
+# unload module which is known but not loaded
+echo
+run syz unload abc/1.0
+check success
+check output_pattern 'syz: Error: No module named abc/1.0 is loaded'
+check envvar_not_pattern 'SYZ_MODULES' abc/1.0
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/1.0
+check envvar_not_pattern 'PATH' "$basedir"/sw/abc/1.0/bin
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_loaded
+check no_modules_inactive
+
 
 
 # FIXME: trying to load module with unknown package name
@@ -436,7 +451,6 @@ check no_modules_inactive
 # FIXME: trying to unload module with unknown package name
 # FIXME: trying to unload module with unknown version
 
-# FIXME: trying to unload module which is known but not loaded
 
 
 
