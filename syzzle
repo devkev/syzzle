@@ -27,6 +27,32 @@ SYZ_VERSION=0.0.1
 # alias var to it (local -n)?
 
 
+# Turn on alias expansion while this file is being sourced.
+# This is necessary for non-interactive use, where expand_aliases is off by default.
+# And also because users may have legitimately disabled it interactively, if they want.
+# Since aliases are resolved when commands are *read*, not when they are executed,
+# enabling expand_aliases at source-time like this is sufficient.
+# The "|| true" is because shopt -p returns exit code of 1 if the queried thing is unset, and this can interfere with the test suite (which has set -e).
+__syz_expand_aliases_save="$(shopt -p expand_aliases || true)"
+shopt -s expand_aliases
+
+
+declare -i __syz__global_var_n=0
+
+
+# The "argument" is passed in by setting the 'global_return_var'
+# The result is a local variable which has the name specified by the value of 'global_return_var'.
+# There will also be a local variable of the same name but with '_name' appended, which is the global variable that "maps" to the local variable.
+# This is what should be passed to functions that want the name of a global variable in which to return stuff.
+# FIXME: WIP: the below is not yet finished.
+alias __syz::__declare_global_return_var='__syz__global_var_n="$__syz__global_var_n + 1" ; local -a _global_vars ; _global_vars+=("global_var_$__syz__global_var_n") ; declare -g "global_var_$__syz__global_var_n" ; local -n "$global_return_var"="global_var_$__syz__global_var_n" ; unset global_return_var'
+
+function syz::test {
+	echo "before num $__syz__global_var_n"
+	global_return_var="foobar" ; __syz::__declare_global_return_var
+	echo " after num $__syz__global_var_n"
+}
+
 
 ##################################################
 ##
@@ -440,8 +466,9 @@ function __syz::resolve_loadable_dir {
 
 
 declare -a __syz_nullglob_stack
+
 function __syz::set_nullglob {
-	__syz_nullglob_stack+=("$(shopt -p nullglob)")
+	__syz_nullglob_stack+=("$(shopt -p nullglob || true)")
 	shopt -s nullglob
 }
 
@@ -637,5 +664,9 @@ __syz_subdirs+=(sw)
 
 
 # FIXME: source user's ~/.syzrc, if present
+
+
+
+eval "$__syz_expand_aliases_save"
 
 
