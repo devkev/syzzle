@@ -13,7 +13,7 @@ fi
 # Setup
 
 basedir=""
-trap 'rc="$?" ; set +ex ; if [ $rc = 0 ]; then echo "ALL TESTS PASSED"; else echo "TEST FAILED ($rc)"; fi ; [ "$basedir" ] && rm -rf "$basedir" ; exit $rc' EXIT
+trap 'rc="$?" ; set +ex ; echo ; if [ $rc = 0 ]; then echo "ALL TESTS PASSED"; else echo "TEST FAILED ($rc)"; fi ; [ "$basedir" ] && rm -rf "$basedir" ; exit $rc' EXIT
 basedir="$(mktemp -d)"
 tmpfile="$basedir/tmpfile"
 
@@ -91,6 +91,14 @@ function check_output_pattern {
 	done
 }
 
+function check_output_not_pattern {
+	local i
+	for i; do
+		echo "$marker ${FUNCNAME[0]} $i"
+		! grep -q "$i" <<<"$o"
+	done
+}
+
 function check_output_exact {
 	local target="$1" ; shift
 	echo "$marker ${FUNCNAME[0]}"
@@ -103,6 +111,14 @@ function check_envvar_pattern {
 	local -n value="$var"
 	echo "$marker ${FUNCNAME[0]} $var $pattern"
 	grep -q "$pattern" <<<"$value"
+}
+
+function check_envvar_not_pattern {
+	local var="$1" ; shift
+	local pattern="$1" ; shift
+	local -n value="$var"
+	echo "$marker ${FUNCNAME[0]} $var $pattern"
+	! grep -q "$pattern" <<<"$value"
 }
 
 function check_envvar_exact {
@@ -160,6 +176,25 @@ function check_modules_loaded {
 		check success
 		check output_pattern 'Currently loaded modules'
 		check output_pattern "\<$i\>"
+		run syz isloaded "$i"
+		check success
+		check output_exact "$i loaded"
+	done
+}
+
+function check_modules_not_loaded {
+	local i
+	for i; do
+		echo "$marker ${FUNCNAME[0]} $i"
+		run syz loaded
+		check success
+		check output_not_pattern "^$i$"
+		via_tty run syz loaded
+		check success
+		check output_not_pattern "\<$i\>"
+		run syz isloaded "$i"
+		check success
+		check output_exact "$i not loaded"
 	done
 }
 
@@ -205,11 +240,13 @@ echo
 run syz avail
 check success
 check output_exact "$test_pvs"
+# FIXME: via_tty
 
 echo
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
 check no_modules_loaded
-
-echo
 check no_modules_inactive
 
 echo
@@ -221,6 +258,8 @@ check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/1.0
 check envvar_pattern 'PATH' "$basedir"/sw/abc/1.0/bin
 
 check modules_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
 check no_modules_inactive
 
 echo
@@ -231,8 +270,62 @@ check envvar_pattern 'SYZ_MODULES' 'def/1.1'
 check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/def/1.1
 check envvar_pattern 'PATH' "$basedir"/sw/def/1.1/bin
 
-check modules_loaded 'def/1.1'
 check modules_loaded 'abc/1.0'
+check modules_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_inactive
+
+echo
+run syz load ghi/1.2
+check success
+check output_pattern 'Loading' 'ghi/1.2'
+check envvar_pattern 'SYZ_MODULES' 'ghi/1.2'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/ghi/1.2
+check envvar_pattern 'PATH' "$basedir"/sw/ghi/1.2/bin
+
+check modules_loaded 'abc/1.0'
+check modules_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+echo
+run syz unload def/1.1
+check success
+check output_pattern 'Unloading' 'def/1.1'
+check envvar_not_pattern 'SYZ_MODULES' 'def/1.1'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/def/1.1
+check envvar_not_pattern 'PATH' "$basedir"/sw/def/1.1/bin
+
+check modules_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+echo
+run syz unload abc/1.0
+check success
+check output_pattern 'Unloading' 'abc/1.0'
+check envvar_not_pattern 'SYZ_MODULES' 'abc/1.0'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/1.0
+check envvar_not_pattern 'PATH' "$basedir"/sw/abc/1.0/bin
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+echo
+run syz unload ghi/1.2
+check success
+check output_pattern 'Unloading' 'ghi/1.2'
+check envvar_not_pattern 'SYZ_MODULES' 'ghi/1.2'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/ghi/1.2
+check envvar_not_pattern 'PATH' "$basedir"/sw/ghi/1.2/bin
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_loaded
 check no_modules_inactive
 
 
