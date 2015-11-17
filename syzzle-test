@@ -28,16 +28,28 @@ test_pvs="${test_pvs%$nl}"
 #echo "$test_pvs"
 export SYZ_PATH="$basedir/sw"
 
+marker="+"
+
+function indent {
+	marker="$marker+"
+}
+
+function unindent {
+	marker="${marker%+}"
+}
 
 function run {
-	echo "+ ${FUNCNAME[0]} $*"
+	indent
+	echo "$marker ${FUNCNAME[0]} $*"
 	"$@" > "$tmpfile"
 	rc="$?"
 	o="$(<"$tmpfile")"
+	unindent
 }
 
 function run_tty {
-	echo "+ ${FUNCNAME[0]} $*"
+	indent
+	echo "$marker ${FUNCNAME[0]} $*"
 	function tty {
 		:
 	}
@@ -45,24 +57,27 @@ function run_tty {
 	rc="$?"
 	o="$(<"$tmpfile")"
 	unset -f tty
+	unindent
 }
 
 
 function check {
 	local what="$1" ; shift
+	indent
 	set -e
 	check_"$what" "$@"
 	set +e
+	unindent
 }
 
 function check_success {
-	echo "++ ${FUNCNAME[0]}"
+	echo "$marker ${FUNCNAME[0]}"
 	[ "$rc" = "0" ]
 }
 
 function check_failure {
 	local code="$1" ; shift
-	echo "++ ${FUNCNAME[0]} $code"
+	echo "$marker ${FUNCNAME[0]} $code"
 	if [ "$code" ]; then
 		[ "$rc" = "$code" ]
 	else
@@ -73,14 +88,14 @@ function check_failure {
 function check_output_pattern {
 	local i
 	for i; do
-		echo "++ ${FUNCNAME[0]} $i"
+		echo "$marker ${FUNCNAME[0]} $i"
 		grep -q "$i" <<<"$o"
 	done
 }
 
 function check_output_exact {
 	local target="$1" ; shift
-	echo "++ ${FUNCNAME[0]}"
+	echo "$marker ${FUNCNAME[0]}"
 	[ "$o" = "$target" ]
 }
 
@@ -88,7 +103,7 @@ function check_envvar_pattern {
 	local var="$1" ; shift
 	local pattern="$1" ; shift
 	local -n value="$var"
-	echo "++ ${FUNCNAME[0]} $var $pattern"
+	echo "$marker ${FUNCNAME[0]} $var $pattern"
 	grep -q "$pattern" <<<"$value"
 }
 
@@ -96,14 +111,14 @@ function check_envvar_exact {
 	local var="$1" ; shift
 	local target="$1" ; shift
 	local -n value="$var"
-	echo "++ ${FUNCNAME[0]} $var"
+	echo "$marker ${FUNCNAME[0]} $var"
 	[ "$value" = "$target" ]
 }
 
 function check_envvar_set {
 	local i
 	for i; do
-		echo "++ ${FUNCNAME[0]} $i"
+		echo "$marker ${FUNCNAME[0]} $i"
 		[ "${!i+set}" = "set" ]
 	done
 }
@@ -111,12 +126,13 @@ function check_envvar_set {
 function check_envvar_unset {
 	local i
 	for i; do
-		echo "++ ${FUNCNAME[0]} $i"
+		echo "$marker ${FUNCNAME[0]} $i"
 		[ "${!i+set}" != "set" ]
 	done
 }
 
 function check_no_modules_loaded {
+	echo "$marker ${FUNCNAME[0]}"
 	run syz loaded
 	check success
 	check output_exact ""
@@ -126,6 +142,7 @@ function check_no_modules_loaded {
 }
 
 function check_no_modules_inactive {
+	echo "$marker ${FUNCNAME[0]}"
 	run syz inactive
 	check success
 	check output_exact ""
@@ -134,10 +151,26 @@ function check_no_modules_inactive {
 	check output_pattern 'No inactive modules\.'
 }
 
-echo "+ prelim"
+function check_modules_loaded {
+	local i
+	for i; do
+		echo "$marker ${FUNCNAME[0]} $i"
+		run syz loaded
+		check success
+		check output_pattern "^$i$"
+		run_tty syz loaded
+		check success
+		check output_pattern 'Currently loaded modules'
+		check output_pattern "\<$i\>"
+	done
+}
+
+echo "$marker prelim"
 check envvar_pattern "SYZ_PATH" '^'"$basedir"'/sw$'
 check envvar_unset SYZ_{MODULES,MODULES_ABS,INACTIVE_MODULES}
 
+echo
+echo "$marker load"
 set -e
 . ./syzzle
 set +e
@@ -149,14 +182,12 @@ check envvar_exact "SYZ_MODULES" ''
 check envvar_exact "SYZ_MODULES_ABS" ''
 check envvar_exact "SYZ_INACTIVE_MODULES" ''
 
+echo
 run syz version
 check success
 check output_pattern "version" "$SYZ_VERSION"
 
-check no_modules_loaded
-
-check no_modules_inactive
-
+echo
 run syz empty
 check success
 o_empty="$o"
@@ -164,6 +195,7 @@ run syz
 check success
 check output_exact "$o_empty"
 
+echo
 run syz show
 check success
 o_show="$o"
@@ -171,10 +203,18 @@ run syz status
 check success
 check output_exact "$o_show"
 
+echo
 run syz avail
 check success
 check output_exact "$test_pvs"
 
+echo
+check no_modules_loaded
+
+echo
+check no_modules_inactive
+
+echo
 run syz load abc/1.0
 check success
 check output_pattern 'Loading' 'abc/1.0'
@@ -182,14 +222,19 @@ check envvar_pattern 'SYZ_MODULES' 'abc/1.0'
 check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/1.0
 check envvar_pattern 'PATH' "$basedir"/sw/abc/1.0/bin
 
-run syz loaded
-check success
-check output_exact "abc/1.0"
-run_tty syz loaded
-check success
-check output_pattern 'Currently loaded modules'
-check output_pattern 'abc/1.0'
+check modules_loaded 'abc/1.0'
+check no_modules_inactive
 
+echo
+run syz load def/1.1
+check success
+check output_pattern 'Loading' 'def/1.1'
+check envvar_pattern 'SYZ_MODULES' 'def/1.1'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/def/1.1
+check envvar_pattern 'PATH' "$basedir"/sw/def/1.1/bin
+
+check modules_loaded 'def/1.1'
+check modules_loaded 'abc/1.0'
 check no_modules_inactive
 
 
