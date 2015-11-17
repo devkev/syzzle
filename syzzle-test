@@ -106,18 +106,22 @@ function check_output_exact {
 
 function check_envvar_pattern {
 	local var="$1" ; shift
-	local pattern="$1" ; shift
-	local -n value="$var"
-	echo "$marker ${FUNCNAME[0]} $var $pattern"
-	grep -q "$pattern" <<<"$value"
+	local pattern
+	for pattern; do
+		local -n value="$var"
+		echo "$marker ${FUNCNAME[0]} $var $pattern"
+		grep -q "$pattern" <<<"$value"
+	done
 }
 
 function check_envvar_not_pattern {
 	local var="$1" ; shift
-	local pattern="$1" ; shift
-	local -n value="$var"
-	echo "$marker ${FUNCNAME[0]} $var $pattern"
-	! grep -q "$pattern" <<<"$value"
+	local pattern
+	for pattern; do
+		local -n value="$var"
+		echo "$marker ${FUNCNAME[0]} $var $pattern"
+		! grep -q "$pattern" <<<"$value"
+	done
 }
 
 function check_envvar_exact {
@@ -395,6 +399,35 @@ check modules_not_loaded 'def/1.1'
 check modules_loaded 'ghi/1.2'
 check no_modules_inactive
 
+# loading multiple modules on one cmdline
+echo
+run syz load {abc/1.0,def/1.1}
+check success
+check output_pattern 'Loading' {abc/1.0,def/1.1}
+check envvar_pattern 'SYZ_MODULES' {abc/1.0,def/1.1}
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/{abc/1.0,def/1.1}
+check envvar_pattern 'PATH' "$basedir"/sw/{abc/1.0,def/1.1}/bin
+
+check modules_loaded 'abc/1.0'
+check modules_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+# unloading multiple modules on one cmdline
+echo
+run syz unload {abc/1.0,def/1.1,ghi/1.2}
+check success
+check output_pattern 'Unloading' {abc/1.0,def/1.1,ghi/1.2}
+check envvar_not_pattern 'SYZ_MODULES' {abc/1.0,def/1.1,ghi/1.2}
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/{abc/1.0,def/1.1,ghi/1.2}
+check envvar_not_pattern 'PATH' "$basedir"/sw/{abc/1.0,def/1.1,ghi/1.2}/bin
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_loaded
+check no_modules_inactive
+
 
 
 # FIXME: trying to load module with unknown package name
@@ -405,8 +438,6 @@ check no_modules_inactive
 
 # FIXME: trying to unload module which is known but not loaded
 
-# FIXME: loading multiple modules on one cmdline
-# FIXME: unloading multiple modules on one cmdline
 
 
 
