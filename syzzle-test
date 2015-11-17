@@ -116,6 +116,24 @@ function check_envvar_unset {
 	done
 }
 
+function check_no_modules_loaded {
+	run syz loaded
+	check success
+	check output_exact ""
+	run_tty syz loaded
+	check success
+	check output_pattern 'No modules currently loaded\.'
+}
+
+function check_no_modules_inactive {
+	run syz inactive
+	check success
+	check output_exact ""
+	run_tty syz inactive
+	check success
+	check output_pattern 'No inactive modules\.'
+}
+
 echo "+ prelim"
 check envvar_pattern "SYZ_PATH" '^'"$basedir"'/sw$'
 check envvar_unset SYZ_{MODULES,MODULES_ABS,INACTIVE_MODULES}
@@ -135,19 +153,9 @@ run syz version
 check success
 check output_pattern "version" "$SYZ_VERSION"
 
-run syz loaded
-check success
-check output_exact ""
-run_tty syz loaded
-check success
-check output_pattern 'No modules currently loaded\.'
+check no_modules_loaded
 
-run syz inactive
-check success
-check output_exact ""
-run_tty syz inactive
-check success
-check output_pattern 'No inactive modules\.'
+check no_modules_inactive
 
 run syz empty
 check success
@@ -174,6 +182,15 @@ check envvar_pattern 'SYZ_MODULES' 'abc/1.0'
 check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/1.0
 check envvar_pattern 'PATH' "$basedir"/sw/abc/1.0/bin
 
+run syz loaded
+check success
+check output_exact "abc/1.0"
+run_tty syz loaded
+check success
+check output_pattern 'Currently loaded modules'
+check output_pattern 'abc/1.0'
+
+check no_modules_inactive
 
 
 
