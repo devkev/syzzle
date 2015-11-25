@@ -60,6 +60,7 @@ function run {
 		fi
 		echo "$marker+ ---- end output ----"
 	fi
+	check no_leaked_global_return_vars
 	unindent
 }
 
@@ -218,9 +219,23 @@ function check_modules_not_loaded {
 	done
 }
 
+function check_no_leaked_global_return_vars {
+	echo "$marker ${FUNCNAME[0]}"
+	! declare -pg | awk '{print $3}' | sed -e 's/=.*$//' | grep -q '^global_var_'
+}
+
+function check_no_leaked_aliases {
+	echo "$marker ${FUNCNAME[0]}"
+	run alias -p
+	check output_exact "$aliases_before"
+}
+
 echo "$marker prelim"
 check envvar_pattern "SYZ_PATH" '^'"$basedir"'/sw$'
 check envvar_unset SYZ_{MODULES,MODULES_ABS,INACTIVE_MODULES}
+
+run alias -p
+aliases_before="$o"
 
 echo
 echo "$marker load"
@@ -228,12 +243,15 @@ set -e
 . ./syzzle
 set +e
 
+check no_leaked_aliases
+
 check envvar_pattern "SYZ_VERSION" '.'
 check envvar_pattern "SYZ_PATH" '^'"$basedir"'/sw$'
 check envvar_set SYZ_{MODULES,MODULES_ABS,INACTIVE_MODULES}
 check envvar_exact "SYZ_MODULES" ''
 check envvar_exact "SYZ_MODULES_ABS" ''
 check envvar_exact "SYZ_INACTIVE_MODULES" ''
+check no_leaked_global_return_vars
 
 echo
 run syz avail
@@ -557,8 +575,9 @@ check no_modules_loaded
 check no_modules_inactive
 
 
+run syz test abc
 run syz load abc/1.0
-syz test
+run syz test abc
 
 
 

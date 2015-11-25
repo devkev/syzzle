@@ -39,33 +39,38 @@ shopt -s expand_aliases
 
 declare -i __syz__global_var_n=0
 
-
-# The "argument" is passed in by setting the 'global_return_var'
+# The "argument" is passed in by setting the 'global_return_var' variable.
+# The options argument is passed in by setting the 'global_return_var_opts' variable.
 # The result is a local variable which has the name specified by the value of 'global_return_var'.
 # There will also be a local variable of the same name but with '_name' appended, which is the global variable that "maps" to the local variable.
 # This is what should be passed to functions that want the name of a global variable in which to return stuff.
 # FIXME: pass 'declare' options (eg. -a or -A for array/associative array), in order to declare a global return var which isn't just a normal var.
-# FIXME: WIP: the below is not yet finished.
-alias __syz::__declare_global_return_var='local "${global_return_var}_name"="global_var_$__syz__global_var_n" ; local -a _global_vars ; _global_vars+=("global_var_$__syz__global_var_n") ; declare -g "global_var_$__syz__global_var_n" ; local -n "$global_return_var"="global_var_$__syz__global_var_n" ; unset global_return_var ; __syz__global_var_n="$__syz__global_var_n + 1"'
+# Can't be array variable: "reference variable cannot be an array". Sigh.
+# Can be associative array, though, even if the keys are numbers.
+alias declare_global_return_var='
+	local "${global_return_var}_name"="global_var_$__syz__global_var_n"
+	local -a _global_vars ; _global_vars+=("global_var_$__syz__global_var_n")
+	declare -g $global_return_var_opts "global_var_$__syz__global_var_n"
+	local -n "$global_return_var"="global_var_$__syz__global_var_n"
+	unset global_return_var global_return_var_opts
+	__syz__global_var_n="$__syz__global_var_n + 1"
+'
 
-# Looks like "trap RETURN"s aren't executed in the context of the function, but rather the calling function's context, or global context.  Lame.
-trap 'unset "${_global_vars[@]}"' RETURN
+# MUST come before the "return" alias, which uses it.
+function __syz::__set_rc {
+	return $1
+}
+
+alias return='
+	local __global_return_var__rc="$?"
+	unset "${_global_vars[@]}"
+	__syz::__set_rc "$__global_return_var__rc"
+	return'
 
 function syz::test {
-	#echo "before num $__syz__global_var_n"
-	#global_return_var="foobar" ; __syz::__declare_global_return_var
-	#echo " after num $__syz__global_var_n"
-	#echo "$foobar_name"
-	#global_var_0="arglebargle"
-	#echo "$global_var_0"
-	#echo "$foobar"
-	#foobar="blerk"
-	#echo "$global_var_0"
-	#echo "$foobar"
-
 	local i
-	global_return_var="_actually_loaded" ; __syz::__declare_global_return_var
-	global_return_var="_something_else" ; __syz::__declare_global_return_var
+	global_return_var="_actually_loaded" ; declare_global_return_var
+	global_return_var="_something_else" ; declare_global_return_var
 	for i; do
 		if __syz::isloaded "$i" $_actually_loaded_name; then
 			echo "$_actually_loaded loaded"
@@ -76,7 +81,7 @@ function syz::test {
 	_something_else=asldjfdlkj
 	echo $_something_else
 	echo ${!_something_else_name}
-	#unset "${_global_vars[@]}"
+	return
 }
 
 
@@ -91,11 +96,13 @@ function syz {
 	if ! __syz::rerun_if_updated "$@"; then
 		syz::dispatch "$@"
 	fi
+	return
 }
 
 
 function sw {
 	syz "$@"
+	return
 }
 
 
@@ -104,6 +111,7 @@ function syz::dispatch {
 	# FIXME: call syz::empty if cmd is empty
 	# FIXME: call syz::unknown if syz_$cmd doesn't exist
 	syz::"$cmd" "$@"
+	return
 }
 
 
@@ -113,23 +121,27 @@ function syz::unknown {
 	# FIXME: better error message if syz_$cmd doesn't exist
 	# FIXME: default action if syz_$cmd doesn't exist should be "load", eg. "syz mongodb/2.6.11" equiv to "syz load mongodb/2.6.11"
 	syz::load "$@"
+	return
 }
 
 
 # Default function when just "syz" is run
 function syz:: {
 	syz::empty
+	return
 }
 
 
 function syz::empty {
 	# FIXME: customisable action
 	syz::show
+	return
 }
 
 
 function syz::show {
 	syz::status "$@"
+	return
 }
 
 
@@ -143,6 +155,7 @@ function syz::status {
 	if [ "$SYZ_INACTIVE_MODULES" ]; then
 		syz::inactive "$@"
 	fi
+	return
 }
 
 
@@ -153,6 +166,7 @@ function syz::loaded {
 	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
 	__syz::columnate "Currently loaded modules" "No modules currently loaded." <<< "$_loaded_str"
 	unset _loaded _loaded_str
+	return
 }
 
 
@@ -161,6 +175,7 @@ function syz::inactive {
 	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
 	__syz::columnate "Inactive modules" "No inactive modules." <<< "$_loaded_str"
 	unset _loaded _loaded_str
+	return
 }
 
 
@@ -208,6 +223,7 @@ function syz::install {
 	# FIXME: download binaries and put into place
 	# FIXME: possibly compile
 	:
+	return
 }
 
 
@@ -221,6 +237,7 @@ function syz::isloaded {
 		fi
 	done
 	unset _actually_loaded
+	return
 }
 
 
@@ -338,6 +355,7 @@ function syz::avail {
 	__syz::columnate "Available modules" "No modules available." <<< "$_str"
 	unset _str
 	unset _syz_path
+	return
 }
 
 
@@ -346,11 +364,13 @@ function syz::reload {
 	local src="$SYZ_SOURCE"
 	unset SYZ_SOURCE
 	. "$src"
+	return
 }
 
 
 function syz::version {
 	echo "syz version $SYZ_VERSION"
+	return
 }
 
 
@@ -365,11 +385,13 @@ function syz::version {
 
 function prepend_path {
 	__syz::adjust_list_var prepend : "$@"
+	return
 }
 
 
 function append_path {
 	__syz::adjust_list_var append : "$@"
+	return
 }
 
 
@@ -377,10 +399,12 @@ function bin_dir {
 	#prepend_path PATH "$@"
 	#FIXME: deal better with $mode
 	__syz::process_dir "$mode" bin "$@"
+	return
 }
 
 function remove_path {
 	__syz::remove_list_var : "$@"
+	return
 }
 
 
@@ -443,6 +467,7 @@ function __syz::process_dir {
 			esac
 			;;
 	esac
+	return
 }
 
 
@@ -496,12 +521,14 @@ declare -a __syz_nullglob_stack
 function __syz::set_nullglob {
 	__syz_nullglob_stack+=("$(shopt -p nullglob || true)")
 	shopt -s nullglob
+	return
 }
 
 
 function __syz::restore_nullglob {
 	eval "${__syz_nullglob_stack[${#__syz_nullglob_stack[@]}-1]}"
 	unset __syz_nullglob_stack[${#__syz_nullglob_stack[@]}-1]
+	return
 }
 
 
@@ -509,6 +536,7 @@ function __syz::fancy_output {
 	# FIXME: allow the user to override
 	# Fancy output for terminals, plain otherwise
 	tty -s 0<&1
+	return
 }
 
 function __syz::columnate {
@@ -543,6 +571,7 @@ function __syz::columnate {
 			echo "$output"
 		fi
 	fi
+	return
 }
 
 
@@ -600,6 +629,7 @@ function __syz::stringify_array {
 
 function __syz::absolutify {
 	echo "$1"
+	return
 }
 
 
@@ -623,6 +653,7 @@ function __syz::adjust_list_var {
 				;;
 		esac
 	done
+	return
 }
 
 
@@ -640,6 +671,7 @@ function __syz::remove_list_var {
 			*)  ;;  # Not present
 		esac
 	done
+	return
 }
 
 
@@ -692,6 +724,8 @@ __syz_subdirs+=(sw)
 # FIXME: source user's ~/.syzrc, if present
 
 
+unalias declare_global_return_var
+unalias return
 
 eval "$__syz_expand_aliases_save"
 unset __syz_expand_aliases_save
