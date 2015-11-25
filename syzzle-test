@@ -557,7 +557,8 @@ check no_modules_loaded
 check no_modules_inactive
 
 
-
+run syz load abc/1.0
+syz test
 
 
 

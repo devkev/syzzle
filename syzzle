@@ -44,22 +44,39 @@ declare -i __syz__global_var_n=0
 # The result is a local variable which has the name specified by the value of 'global_return_var'.
 # There will also be a local variable of the same name but with '_name' appended, which is the global variable that "maps" to the local variable.
 # This is what should be passed to functions that want the name of a global variable in which to return stuff.
+# FIXME: pass 'declare' options (eg. -a or -A for array/associative array), in order to declare a global return var which isn't just a normal var.
 # FIXME: WIP: the below is not yet finished.
-alias __syz::__declare_global_return_var='local "${global_return_var}_name"="global_var_$__syz__global_var_n" ; local -a _global_vars ; _global_vars+=("global_var_$__syz__global_var_n") ; declare -g "global_var_$__syz__global_var_n"="foo" ; local -n "$global_return_var"="global_var_$__syz__global_var_n" ; unset global_return_var ; __syz__global_var_n="$__syz__global_var_n + 1"'
+alias __syz::__declare_global_return_var='local "${global_return_var}_name"="global_var_$__syz__global_var_n" ; local -a _global_vars ; _global_vars+=("global_var_$__syz__global_var_n") ; declare -g "global_var_$__syz__global_var_n" ; local -n "$global_return_var"="global_var_$__syz__global_var_n" ; unset global_return_var ; __syz__global_var_n="$__syz__global_var_n + 1"'
 
-# FIXME: a trap to unset everything in ${_global_vars[@]} at every function end
+# Looks like "trap RETURN"s aren't executed in the context of the function, but rather the calling function's context, or global context.  Lame.
+trap 'unset "${_global_vars[@]}"' RETURN
 
 function syz::test {
-	echo "before num $__syz__global_var_n"
-	global_return_var="foobar" ; __syz::__declare_global_return_var
-	echo " after num $__syz__global_var_n"
-	echo "$foobar_name"
-	global_var_0="arglebargle"
-	echo "$global_var_0"
-	echo "$foobar"
-	foobar="blerk"
-	echo "$global_var_0"
-	echo "$foobar"
+	#echo "before num $__syz__global_var_n"
+	#global_return_var="foobar" ; __syz::__declare_global_return_var
+	#echo " after num $__syz__global_var_n"
+	#echo "$foobar_name"
+	#global_var_0="arglebargle"
+	#echo "$global_var_0"
+	#echo "$foobar"
+	#foobar="blerk"
+	#echo "$global_var_0"
+	#echo "$foobar"
+
+	local i
+	global_return_var="_actually_loaded" ; __syz::__declare_global_return_var
+	global_return_var="_something_else" ; __syz::__declare_global_return_var
+	for i; do
+		if __syz::isloaded "$i" $_actually_loaded_name; then
+			echo "$_actually_loaded loaded"
+		else
+			echo "$i not loaded"
+		fi
+	done
+	_something_else=asldjfdlkj
+	echo $_something_else
+	echo ${!_something_else_name}
+	#unset "${_global_vars[@]}"
 }
 
 
