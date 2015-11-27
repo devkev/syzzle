@@ -14,19 +14,6 @@ SYZ_VERSION=0.0.1
 # FIXME: test suite which exercises all the user-facing functions
 
 
-function syz::test {
-	local i
-	local _actually_loaded
-	for i; do
-		if __syz::isloaded "$i" _actually_loaded; then
-			echo "$_actually_loaded loaded"
-		else
-			echo "$i not loaded"
-		fi
-	done
-}
-
-
 ##################################################
 ##
 ##  External (user facing) functions
@@ -38,13 +25,11 @@ function syz {
 	if ! __syz::rerun_if_updated "$@"; then
 		syz::dispatch "$@"
 	fi
-	return
 }
 
 
 function sw {
 	syz "$@"
-	return
 }
 
 
@@ -53,7 +38,6 @@ function syz::dispatch {
 	# FIXME: call syz::empty if cmd is empty
 	# FIXME: call syz::unknown if syz_$cmd doesn't exist
 	syz::"$cmd" "$@"
-	return
 }
 
 
@@ -63,27 +47,23 @@ function syz::unknown {
 	# FIXME: better error message if syz_$cmd doesn't exist
 	# FIXME: default action if syz_$cmd doesn't exist should be "load", eg. "syz mongodb/2.6.11" equiv to "syz load mongodb/2.6.11"
 	syz::load "$@"
-	return
 }
 
 
 # Default function when just "syz" is run
 function syz:: {
 	syz::empty
-	return
 }
 
 
 function syz::empty {
 	# FIXME: customisable action
 	syz::show
-	return
 }
 
 
 function syz::show {
 	syz::status "$@"
-	return
 }
 
 
@@ -97,7 +77,6 @@ function syz::status {
 	if [ "$SYZ_INACTIVE_MODULES" ]; then
 		syz::inactive "$@"
 	fi
-	return
 }
 
 
@@ -108,7 +87,6 @@ function syz::loaded {
 	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
 	__syz::columnate "Currently loaded modules" "No modules currently loaded." <<< "$_loaded_str"
 	unset _loaded _loaded_str
-	return
 }
 
 
@@ -117,7 +95,6 @@ function syz::inactive {
 	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
 	__syz::columnate "Inactive modules" "No inactive modules." <<< "$_loaded_str"
 	unset _loaded _loaded_str
-	return
 }
 
 
@@ -164,7 +141,6 @@ function syz::install {
 	# FIXME: download binaries and put into place
 	# FIXME: possibly compile
 	:
-	return
 }
 
 
@@ -295,7 +271,6 @@ function syz::avail {
 	__syz::columnate "Available modules" "No modules available." <<< "$_str"
 	unset _str
 	unset _syz_path
-	return
 }
 
 
@@ -304,13 +279,11 @@ function syz::reload {
 	local src="$SYZ_SOURCE"
 	unset SYZ_SOURCE
 	. "$src"
-	return
 }
 
 
 function syz::version {
 	echo "syz version $SYZ_VERSION"
-	return
 }
 
 
@@ -325,13 +298,11 @@ function syz::version {
 
 function prepend_path {
 	__syz::adjust_list_var prepend : "$@"
-	return
 }
 
 
 function append_path {
 	__syz::adjust_list_var append : "$@"
-	return
 }
 
 
@@ -339,12 +310,10 @@ function bin_dir {
 	#prepend_path PATH "$@"
 	#FIXME: deal better with $mode
 	__syz::process_dir "$mode" bin "$@"
-	return
 }
 
 function remove_path {
 	__syz::remove_list_var : "$@"
-	return
 }
 
 
@@ -407,7 +376,6 @@ function __syz::process_dir {
 			esac
 			;;
 	esac
-	return
 }
 
 
@@ -461,14 +429,12 @@ declare -a __syz_nullglob_stack
 function __syz::set_nullglob {
 	__syz_nullglob_stack+=("$(shopt -p nullglob || true)")
 	shopt -s nullglob
-	return
 }
 
 
 function __syz::restore_nullglob {
 	eval "${__syz_nullglob_stack[${#__syz_nullglob_stack[@]}-1]}"
 	unset __syz_nullglob_stack[${#__syz_nullglob_stack[@]}-1]
-	return
 }
 
 
@@ -476,7 +442,6 @@ function __syz::fancy_output {
 	# FIXME: allow the user to override
 	# Fancy output for terminals, plain otherwise
 	tty -s 0<&1
-	return
 }
 
 function __syz::columnate {
@@ -511,7 +476,6 @@ function __syz::columnate {
 			echo "$output"
 		fi
 	fi
-	return
 }
 
 
@@ -569,7 +533,6 @@ function __syz::stringify_array {
 
 function __syz::absolutify {
 	echo "$1"
-	return
 }
 
 
@@ -593,7 +556,6 @@ function __syz::adjust_list_var {
 				;;
 		esac
 	done
-	return
 }
 
 
@@ -611,7 +573,6 @@ function __syz::remove_list_var {
 			*)  ;;  # Not present
 		esac
 	done
-	return
 }
 
 

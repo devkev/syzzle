@@ -219,11 +219,14 @@ function check_modules_not_loaded {
 	done
 }
 
+# FIXME: make this more generically catch leaked environment vars
+# (only lowercase, since uppercase ones can be legitimately modified)
 function check_no_leaked_global_return_vars {
 	echo "$marker ${FUNCNAME[0]}"
 	! declare -pg | awk '{print $3}' | sed -e 's/=.*$//' | grep -q '^global_var_'
 }
 
+# FIXME: make this check every time 'run' is used
 function check_no_leaked_aliases {
 	echo "$marker ${FUNCNAME[0]}"
 	run alias -p
@@ -573,12 +576,6 @@ check modules_not_loaded 'ghi/1.2'
 check modules_not_loaded 'abc/0.9'
 check no_modules_loaded
 check no_modules_inactive
-
-
-run syz test abc
-run syz load abc/1.0
-run syz test abc
-
 
 
 
