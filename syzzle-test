@@ -24,8 +24,11 @@ unset i
 
 basedir=""
 trap '__syz_rc="$?" ; set +ex ; echo ; if [ $__syz_rc = 0 ]; then echo "ALL TESTS PASSED"; else echo "TEST FAILED ($__syz_rc)"; fi ; [ "$basedir" ] && rm -rf "$basedir" ; exit $__syz_rc' EXIT
-basedir="$(mktemp -d)"
-tmpfile="$basedir/tmpfile"
+basedir="${SYZZLE_TEST_BASEDIR:-$(mktemp -d)}"
+if [ ! -e "$basedir" ]; then
+	mkdir -p "$basedir"
+fi
+__syz_tmpfile="$basedir/tmpfile"
 
 nl='
 '
@@ -48,19 +51,25 @@ function unindent {
 	__syz_marker="${__syz_marker%+}"
 }
 
+function msg {
+	echo "$__syz_marker $*"
+}
+
 function do_run {
 	indent
-	echo "$__syz_marker ${FUNCNAME[0]} $*"
-	"$@" > "$tmpfile"
+	msg "${FUNCNAME[0]} $*"
+	"$@" > "$__syz_tmpfile"
 	__syz_rc="$?"
-	__syz_o="$(<"$tmpfile")"
+	__syz_o="$(<"$__syz_tmpfile")"
 	if [ "$verbose" = y ]; then
-		echo "$__syz_marker+ rc=$__syz_rc"
-		echo "$__syz_marker+ ---- start output ----"
+		indent
+		msg "rc=$__syz_rc"
+		msg "---- start output ----"
 		if [ "$__syz_o" ]; then
 			echo "$__syz_o"
 		fi
-		echo "$__syz_marker+ ---- end output ----"
+		msg "---- end output ----"
+		unindent
 	fi
 	unindent
 }
@@ -77,7 +86,7 @@ function run {
 
 function via_tty {
 	indent
-	echo "$__syz_marker ${FUNCNAME[0]} $*"
+	msg "${FUNCNAME[0]} $*"
 	function tty {
 		:
 	}
@@ -97,13 +106,13 @@ function check {
 }
 
 function check_success {
-	echo "$__syz_marker ${FUNCNAME[0]}"
+	msg "${FUNCNAME[0]}"
 	[ "$__syz_rc" = "0" ]
 }
 
 function check_failure {
 	local code="$1"
-	echo "$__syz_marker ${FUNCNAME[0]} $code"
+	msg "${FUNCNAME[0]} $code"
 	if [ "$code" ]; then
 		[ "$__syz_rc" = "$code" ]
 	else
@@ -114,7 +123,7 @@ function check_failure {
 function check_output_pattern {
 	local i
 	for i; do
-		echo "$__syz_marker ${FUNCNAME[0]} $i"
+		msg "${FUNCNAME[0]} $i"
 		grep -q "$i" <<<"$__syz_o"
 	done
 }
@@ -122,14 +131,14 @@ function check_output_pattern {
 function check_output_not_pattern {
 	local i
 	for i; do
-		echo "$__syz_marker ${FUNCNAME[0]} $i"
+		msg "${FUNCNAME[0]} $i"
 		! grep -q "$i" <<<"$__syz_o"
 	done
 }
 
 function check_output_exact {
 	local target="$1" ; shift
-	echo "$__syz_marker ${FUNCNAME[0]}"
+	msg "${FUNCNAME[0]}"
 	[ "$__syz_o" = "$target" ]
 }
 
@@ -138,7 +147,7 @@ function check_envvar_pattern {
 	local pattern
 	for pattern; do
 		local -n value="$var"
-		echo "$__syz_marker ${FUNCNAME[0]} $var $pattern"
+		msg "${FUNCNAME[0]} $var $pattern"
 		grep -q "$pattern" <<<"$value"
 	done
 }
@@ -148,7 +157,7 @@ function check_envvar_not_pattern {
 	local pattern
 	for pattern; do
 		local -n value="$var"
-		echo "$__syz_marker ${FUNCNAME[0]} $var $pattern"
+		msg "${FUNCNAME[0]} $var $pattern"
 		! grep -q "$pattern" <<<"$value"
 	done
 }
@@ -157,14 +166,14 @@ function check_envvar_exact {
 	local var="$1" ; shift
 	local target="$1" ; shift
 	local -n value="$var"
-	echo "$__syz_marker ${FUNCNAME[0]} $var"
+	msg "${FUNCNAME[0]} $var"
 	[ "$value" = "$target" ]
 }
 
 function check_envvar_set {
 	local i
 	for i; do
-		echo "$__syz_marker ${FUNCNAME[0]} $i"
+		msg "${FUNCNAME[0]} $i"
 		[ "${!i+set}" = "set" ]
 	done
 }
@@ -172,13 +181,13 @@ function check_envvar_set {
 function check_envvar_unset {
 	local i
 	for i; do
-		echo "$__syz_marker ${FUNCNAME[0]} $i"
+		msg "${FUNCNAME[0]} $i"
 		[ "${!i+set}" != "set" ]
 	done
 }
 
 function check_no_modules_loaded {
-	echo "$__syz_marker ${FUNCNAME[0]}"
+	msg "${FUNCNAME[0]}"
 	run syz loaded
 	check success
 	check output_exact ""
@@ -188,7 +197,7 @@ function check_no_modules_loaded {
 }
 
 function check_no_modules_inactive {
-	echo "$__syz_marker ${FUNCNAME[0]}"
+	msg "${FUNCNAME[0]}"
 	run syz inactive
 	check success
 	check output_exact ""
@@ -200,7 +209,7 @@ function check_no_modules_inactive {
 function check_modules_loaded {
 	local i
 	for i; do
-		echo "$__syz_marker ${FUNCNAME[0]} $i"
+		msg "${FUNCNAME[0]} $i"
 		run syz loaded
 		check success
 		check output_pattern "^$i$"
@@ -217,7 +226,7 @@ function check_modules_loaded {
 function check_modules_not_loaded {
 	local i
 	for i; do
-		echo "$__syz_marker ${FUNCNAME[0]} $i"
+		msg "${FUNCNAME[0]} $i"
 		run syz loaded
 		check success
 		check output_not_pattern "^$i$"
@@ -234,23 +243,25 @@ function check_modules_not_loaded {
 # exclude: uppercase, starts with "__syz_", and the "_" variable.
 function check_no_leaked_vars {
 	if [ "$1" = "--setup" ]; then
-		declare -p $(compgen -v -o default | grep -Ev '^[A-Z]|^__syz_|^_$') > "$tmpfile"
-		declare -g __syz_vars_before="$(<"$tmpfile")"
+		declare -p $(compgen -v -o default | grep -Ev '^[A-Z]|^__syz_|^_$') > "$__syz_tmpfile"
+		declare -g __syz_vars_before="$(<"$__syz_tmpfile")"
 	else
-		echo "$__syz_marker ${FUNCNAME[0]}"
-		declare -p $(compgen -v -o default | grep -Ev '^[A-Z]|^__syz_|^_$') > "$tmpfile"
-		local __syz_vars_after="$(<"$tmpfile")"
+		msg "${FUNCNAME[0]}"
+		declare -p $(compgen -v -o default | grep -Ev '^[A-Z]|^__syz_|^_$') > "$__syz_tmpfile"
+		local __syz_vars_after="$(<"$__syz_tmpfile")"
 		if [ "$verbose" = y ]; then
-			echo "$__syz_marker+ ---- start vars_before ----"
+			indent
+			msg "---- start vars_before ----"
 			if [ "$__syz_vars_before" ]; then
 				echo "$__syz_vars_before"
 			fi
-			echo "$__syz_marker+ ---- end vars_before ----"
-			echo "$__syz_marker+ ---- start vars_after ----"
+			msg "---- end vars_before ----"
+			msg "---- start vars_after ----"
 			if [ "$__syz_vars_after" ]; then
 				echo "$__syz_vars_after"
 			fi
-			echo "$__syz_marker+ ---- end vars_after ----"
+			msg "---- end vars_after ----"
+			unindent
 		fi
 		[ "$__syz_vars_before" = "$__syz_vars_after" ]
 	fi
@@ -265,7 +276,7 @@ function check_no_leaked_aliases {
 		__syz_rc="$old_rc"
 		__syz_o="$old_o"
 	else
-		echo "$__syz_marker ${FUNCNAME[0]}"
+		msg "${FUNCNAME[0]}"
 		local old_rc="$__syz_rc"
 		local old_o="$__syz_o"
 		do_run alias -p
@@ -275,7 +286,7 @@ function check_no_leaked_aliases {
 	fi
 }
 
-echo "$__syz_marker prelim"
+msg "prelim"
 check envvar_pattern "SYZ_PATH" '^'"$basedir"'/sw$'
 check envvar_unset SYZ_{MODULES,MODULES_ABS,INACTIVE_MODULES}
 
@@ -283,7 +294,7 @@ check no_leaked_vars --setup
 check no_leaked_aliases --setup
 
 echo
-echo "$__syz_marker load"
+msg "load"
 set -e
 . ./syzzle
 set +e
