@@ -83,20 +83,20 @@ function syz::status {
 function syz::loaded {
 	# FIXME: identify orphaned modules and display them differently/separately.
 	# Oprhaned modules are those that have been loaded, but now fail __syz::is_loadable_dir.
+	local -a _loaded
 	__syz::parse_list _loaded "$SYZ_MODULES"
 	local _loaded_str
 	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
 	__syz::columnate "Currently loaded modules" "No modules currently loaded." <<< "$_loaded_str"
-	unset _loaded
 }
 
 
 function syz::inactive {
+	local -a _loaded
 	__syz::parse_list _loaded "$SYZ_INACTIVE_MODULES"
 	local _loaded_str
 	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
 	__syz::columnate "Inactive modules" "No inactive modules." <<< "$_loaded_str"
-	unset _loaded
 }
 
 
@@ -212,6 +212,7 @@ function syz::avail {
 	# FIXME: accept multiple args
 	local basedir
 	local -a _modules=()
+	local -a _syz_path
 	__syz::parse_list _syz_path "$SYZ_PATH"
 	if [ "$SYZ_PATH" ]; then
 		__syz::set_nullglob
@@ -271,7 +272,6 @@ function syz::avail {
 	local _str
 	__syz::stringify_array -d "$__syz_nl" _str _modules
 	__syz::columnate "Available modules" "No modules available." <<< "$_str"
-	unset _syz_path
 }
 
 
@@ -383,6 +383,7 @@ function __syz::process_dir {
 function __syz::isloaded {
 	local looking_for="$1" ; shift
 	local ${1+-n} found="$1" ; shift
+	local -a _loaded
 	__syz::parse_list _loaded "$SYZ_MODULES"
 	local i
 	local rc=1
@@ -395,7 +396,6 @@ function __syz::isloaded {
 				;;
 		esac
 	done
-	unset _loaded
 	return "$rc"
 }
 
@@ -407,6 +407,7 @@ function __syz::resolve_loadable_dir {
 	local ${1+-n} output_dir="$1" ; shift
 	local basedir
 	local rc=1
+	local -a _syz_path
 	__syz::parse_list _syz_path "$SYZ_PATH"
 	if [ "$SYZ_PATH" ]; then
 		__syz::set_nullglob
@@ -420,7 +421,6 @@ function __syz::resolve_loadable_dir {
 		done
 		__syz::restore_nullglob
 	fi
-	unset _syz_path
 	return "$rc"
 }
 
@@ -502,12 +502,13 @@ function __syz::parse_list {
 		delim="$2"
 		shift 2
 	fi
+	local -n output="$1" ; shift
 	local old_IFS="$IFS"
 	IFS="$delim"
-	declare -ag "$1=()"
+	output=()
 	local i
-	for i in $2; do
-		declare -ag "$1+=($i)"
+	for i in $1; do
+		output+=("$i")
 	done
 	local rc="$?"
 	IFS="$old_IFS"
