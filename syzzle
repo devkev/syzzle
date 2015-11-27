@@ -84,17 +84,19 @@ function syz::loaded {
 	# FIXME: identify orphaned modules and display them differently/separately.
 	# Oprhaned modules are those that have been loaded, but now fail __syz::is_loadable_dir.
 	__syz::parse_list _loaded "$SYZ_MODULES"
+	local _loaded_str
 	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
 	__syz::columnate "Currently loaded modules" "No modules currently loaded." <<< "$_loaded_str"
-	unset _loaded _loaded_str
+	unset _loaded
 }
 
 
 function syz::inactive {
 	__syz::parse_list _loaded "$SYZ_INACTIVE_MODULES"
+	local _loaded_str
 	__syz::stringify_array -d "$__syz_nl" _loaded_str _loaded
 	__syz::columnate "Inactive modules" "No inactive modules." <<< "$_loaded_str"
-	unset _loaded _loaded_str
+	unset _loaded
 }
 
 
@@ -160,6 +162,8 @@ function syz::isloaded {
 function syz::unload {
 	local rc=0
 	local i
+	local _actually_loaded
+	local _resolved_pv _resolved_dir
 	for i; do
 		if ! __syz::isloaded "$i" _actually_loaded; then
 			echo "syz: Error: No module named $i is loaded"
@@ -199,9 +203,6 @@ function syz::unload {
 			rc=1
 		fi
 	done
-	unset _actually_loaded
-	unset _resolved_pv
-	unset _resolved_dir
 	return "$rc"
 }
 
@@ -267,9 +268,9 @@ function syz::avail {
 		done
 		__syz::restore_nullglob
 	fi
+	local _str
 	__syz::stringify_array -d "$__syz_nl" _str _modules
 	__syz::columnate "Available modules" "No modules available." <<< "$_str"
-	unset _str
 	unset _syz_path
 }
 
@@ -520,11 +521,11 @@ function __syz::stringify_array {
 		delim="$2"
 		shift 2
 	fi
-	local output="$1" ; shift
+	local -n output="$1" ; shift
 	local -n array="$1" ; shift
 	local old_IFS="$IFS"
 	IFS="$delim"
-	declare -g "$output=${array[*]}"
+	output="${array[*]}"
 	local rc="$?"
 	IFS="$old_IFS"
 	return "$rc"
