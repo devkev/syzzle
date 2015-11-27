@@ -49,10 +49,12 @@ declare -i __syz__global_var_n=0
 # Can be associative array, though, even if the keys are numbers.
 alias declare_global_return_var='
 	local "${global_return_var}_name"="global_var_$__syz__global_var_n"
-	local -a _global_vars ; _global_vars+=("global_var_$__syz__global_var_n")
-	declare -g $global_return_var_opts "global_var_$__syz__global_var_n"
+	local _global_vars_belongs_to="${FUNCNAME[0]}"
+	local -a _global_vars
+	_global_vars+=("global_var_$__syz__global_var_n")
+	declare -g "global_var_$__syz__global_var_n"
 	local -n "$global_return_var"="global_var_$__syz__global_var_n"
-	unset global_return_var global_return_var_opts
+	unset global_return_var
 	__syz__global_var_n="$__syz__global_var_n + 1"
 '
 
@@ -61,27 +63,30 @@ function __syz::__set_rc {
 	return $1
 }
 
+# In bash, local function variables are available to called variables (as long
+# as the called variable doesn't also declare a local variable of the same
+# name).
+
+# This test is necessary because with bash's crazy local variable semantics, called functions
 alias return='
 	local __global_return_var__rc="$?"
-	unset "${_global_vars[@]}"
+	if [ "$_global_vars_belongs_to" = "${FUNCNAME[0]}" ]; then
+		echo '"'"'*************************'"'"' "in ${FUNCNAME[0]} and unsetting ${_global_vars[@]}" 1>&2
+		unset "${_global_vars[@]}"
+	fi
 	__syz::__set_rc "$__global_return_var__rc"
 	return'
 
 function syz::test {
 	local i
-	global_return_var="_actually_loaded" ; declare_global_return_var
-	global_return_var="_something_else" ; declare_global_return_var
+	local _actually_loaded
 	for i; do
-		if __syz::isloaded "$i" $_actually_loaded_name; then
+		if __syz::isloaded "$i" _actually_loaded; then
 			echo "$_actually_loaded loaded"
 		else
 			echo "$i not loaded"
 		fi
 	done
-	_something_else=asldjfdlkj
-	echo $_something_else
-	echo ${!_something_else_name}
-	return
 }
 
 
@@ -227,17 +232,39 @@ function syz::install {
 }
 
 
+#function syz::test {
+#	local i
+#	global_return_var="_actually_loaded" ; declare_global_return_var
+#	global_return_var="_something_else" ; declare_global_return_var
+#	for i; do
+#		if __syz::isloaded "$i" $_actually_loaded_name; then
+#			echo "$_actually_loaded loaded"
+#		else
+#			echo "$i not loaded"
+#		fi
+#	done
+#	_something_else=asldjfdlkj
+#	echo $_something_else
+#	echo ${!_something_else_name}
+#	return
+#}
 function syz::isloaded {
 	local i
+	local _actually_loaded
+	#global_return_var="_actually_loaded" ; declare_global_return_var
+	#echo "$_actually_loaded_name" 1>&2
+	#echo "${!_actually_loaded_name}" 1>&2
 	for i; do
+		#if __syz::isloaded "$i" $_actually_loaded_name; then
 		if __syz::isloaded "$i" _actually_loaded; then
 			echo "$_actually_loaded loaded"
+			#echo "${!_actually_loaded_name}" 1>&2
 		else
 			echo "$i not loaded"
 		fi
 	done
-	unset _actually_loaded
-	return
+	#unset _actually_loaded_foo
+	#return
 }
 
 
