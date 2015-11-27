@@ -18,11 +18,12 @@ for i; do
 			;;
 	esac
 done
+unset i
 
 # Setup
 
 basedir=""
-trap 'rc="$?" ; set +ex ; echo ; if [ $rc = 0 ]; then echo "ALL TESTS PASSED"; else echo "TEST FAILED ($rc)"; fi ; [ "$basedir" ] && rm -rf "$basedir" ; exit $rc' EXIT
+trap '__syz_rc="$?" ; set +ex ; echo ; if [ $__syz_rc = 0 ]; then echo "ALL TESTS PASSED"; else echo "TEST FAILED ($__syz_rc)"; fi ; [ "$basedir" ] && rm -rf "$basedir" ; exit $__syz_rc' EXIT
 basedir="$(mktemp -d)"
 tmpfile="$basedir/tmpfile"
 
@@ -32,41 +33,51 @@ test_pvs=""
 for i in {abc,def,ghi,jkl}/{1.0,1.1,1.2,1.3}; do
 	test_pvs="$test_pvs$i$nl"
 done
+unset i
 test_pvs="${test_pvs%$nl}"
 #echo "$test_pvs"
 export SYZ_PATH="$basedir/sw"
 
-marker="+"
+__syz_marker="+"
 
 function indent {
-	marker="$marker+"
+	__syz_marker="$__syz_marker+"
 }
 
 function unindent {
-	marker="${marker%+}"
+	__syz_marker="${__syz_marker%+}"
+}
+
+function do_run {
+	indent
+	echo "$__syz_marker ${FUNCNAME[0]} $*"
+	"$@" > "$tmpfile"
+	__syz_rc="$?"
+	__syz_o="$(<"$tmpfile")"
+	if [ "$verbose" = y ]; then
+		echo "$__syz_marker+ rc=$__syz_rc"
+		echo "$__syz_marker+ ---- start output ----"
+		if [ "$__syz_o" ]; then
+			echo "$__syz_o"
+		fi
+		echo "$__syz_marker+ ---- end output ----"
+	fi
+	unindent
 }
 
 function run {
 	indent
-	echo "$marker ${FUNCNAME[0]} $*"
-	"$@" > "$tmpfile"
-	rc="$?"
-	o="$(<"$tmpfile")"
-	if [ "$verbose" = y ]; then
-		echo "$marker+ rc=$rc"
-		echo "$marker+ ---- start output ----"
-		if [ "$o" ]; then
-			echo "$o"
-		fi
-		echo "$marker+ ---- end output ----"
-	fi
-	check no_leaked_global_return_vars
+	check no_leaked_vars --setup
+	check no_leaked_aliases --setup
+	do_run "$@"
+	check no_leaked_vars
+	check no_leaked_aliases
 	unindent
 }
 
 function via_tty {
 	indent
-	echo "$marker ${FUNCNAME[0]} $*"
+	echo "$__syz_marker ${FUNCNAME[0]} $*"
 	function tty {
 		:
 	}
@@ -77,49 +88,49 @@ function via_tty {
 
 
 function check {
-	local what="$1" ; shift
+	local __syz_what="$1" ; shift
 	indent
 	set -e
-	check_"$what" "$@"
+	check_"$__syz_what" "$@"
 	set +e
 	unindent
 }
 
 function check_success {
-	echo "$marker ${FUNCNAME[0]}"
-	[ "$rc" = "0" ]
+	echo "$__syz_marker ${FUNCNAME[0]}"
+	[ "$__syz_rc" = "0" ]
 }
 
 function check_failure {
 	local code="$1"
-	echo "$marker ${FUNCNAME[0]} $code"
+	echo "$__syz_marker ${FUNCNAME[0]} $code"
 	if [ "$code" ]; then
-		[ "$rc" = "$code" ]
+		[ "$__syz_rc" = "$code" ]
 	else
-		[ "$rc" != "0" ]
+		[ "$__syz_rc" != "0" ]
 	fi
 }
 
 function check_output_pattern {
 	local i
 	for i; do
-		echo "$marker ${FUNCNAME[0]} $i"
-		grep -q "$i" <<<"$o"
+		echo "$__syz_marker ${FUNCNAME[0]} $i"
+		grep -q "$i" <<<"$__syz_o"
 	done
 }
 
 function check_output_not_pattern {
 	local i
 	for i; do
-		echo "$marker ${FUNCNAME[0]} $i"
-		! grep -q "$i" <<<"$o"
+		echo "$__syz_marker ${FUNCNAME[0]} $i"
+		! grep -q "$i" <<<"$__syz_o"
 	done
 }
 
 function check_output_exact {
 	local target="$1" ; shift
-	echo "$marker ${FUNCNAME[0]}"
-	[ "$o" = "$target" ]
+	echo "$__syz_marker ${FUNCNAME[0]}"
+	[ "$__syz_o" = "$target" ]
 }
 
 function check_envvar_pattern {
@@ -127,7 +138,7 @@ function check_envvar_pattern {
 	local pattern
 	for pattern; do
 		local -n value="$var"
-		echo "$marker ${FUNCNAME[0]} $var $pattern"
+		echo "$__syz_marker ${FUNCNAME[0]} $var $pattern"
 		grep -q "$pattern" <<<"$value"
 	done
 }
@@ -137,7 +148,7 @@ function check_envvar_not_pattern {
 	local pattern
 	for pattern; do
 		local -n value="$var"
-		echo "$marker ${FUNCNAME[0]} $var $pattern"
+		echo "$__syz_marker ${FUNCNAME[0]} $var $pattern"
 		! grep -q "$pattern" <<<"$value"
 	done
 }
@@ -146,14 +157,14 @@ function check_envvar_exact {
 	local var="$1" ; shift
 	local target="$1" ; shift
 	local -n value="$var"
-	echo "$marker ${FUNCNAME[0]} $var"
+	echo "$__syz_marker ${FUNCNAME[0]} $var"
 	[ "$value" = "$target" ]
 }
 
 function check_envvar_set {
 	local i
 	for i; do
-		echo "$marker ${FUNCNAME[0]} $i"
+		echo "$__syz_marker ${FUNCNAME[0]} $i"
 		[ "${!i+set}" = "set" ]
 	done
 }
@@ -161,13 +172,13 @@ function check_envvar_set {
 function check_envvar_unset {
 	local i
 	for i; do
-		echo "$marker ${FUNCNAME[0]} $i"
+		echo "$__syz_marker ${FUNCNAME[0]} $i"
 		[ "${!i+set}" != "set" ]
 	done
 }
 
 function check_no_modules_loaded {
-	echo "$marker ${FUNCNAME[0]}"
+	echo "$__syz_marker ${FUNCNAME[0]}"
 	run syz loaded
 	check success
 	check output_exact ""
@@ -177,7 +188,7 @@ function check_no_modules_loaded {
 }
 
 function check_no_modules_inactive {
-	echo "$marker ${FUNCNAME[0]}"
+	echo "$__syz_marker ${FUNCNAME[0]}"
 	run syz inactive
 	check success
 	check output_exact ""
@@ -189,7 +200,7 @@ function check_no_modules_inactive {
 function check_modules_loaded {
 	local i
 	for i; do
-		echo "$marker ${FUNCNAME[0]} $i"
+		echo "$__syz_marker ${FUNCNAME[0]} $i"
 		run syz loaded
 		check success
 		check output_pattern "^$i$"
@@ -206,7 +217,7 @@ function check_modules_loaded {
 function check_modules_not_loaded {
 	local i
 	for i; do
-		echo "$marker ${FUNCNAME[0]} $i"
+		echo "$__syz_marker ${FUNCNAME[0]} $i"
 		run syz loaded
 		check success
 		check output_not_pattern "^$i$"
@@ -219,33 +230,65 @@ function check_modules_not_loaded {
 	done
 }
 
-# FIXME: make this more generically catch leaked environment vars
-# (only lowercase, since uppercase ones can be legitimately modified)
-function check_no_leaked_global_return_vars {
-	echo "$marker ${FUNCNAME[0]}"
-	! declare -pg | awk '{print $3}' | sed -e 's/=.*$//' | grep -q '^global_var_'
+# generically catch any leaked environment vars.
+# exclude: uppercase, starts with "__syz_", and the "_" variable.
+function check_no_leaked_vars {
+	if [ "$1" = "--setup" ]; then
+		declare -p $(compgen -v -o default | grep -Ev '^[A-Z]|^__syz_|^_$') > "$tmpfile"
+		declare -g __syz_vars_before="$(<"$tmpfile")"
+	else
+		echo "$__syz_marker ${FUNCNAME[0]}"
+		declare -p $(compgen -v -o default | grep -Ev '^[A-Z]|^__syz_|^_$') > "$tmpfile"
+		local __syz_vars_after="$(<"$tmpfile")"
+		if [ "$verbose" = y ]; then
+			echo "$__syz_marker+ ---- start vars_before ----"
+			if [ "$__syz_vars_before" ]; then
+				echo "$__syz_vars_before"
+			fi
+			echo "$__syz_marker+ ---- end vars_before ----"
+			echo "$__syz_marker+ ---- start vars_after ----"
+			if [ "$__syz_vars_after" ]; then
+				echo "$__syz_vars_after"
+			fi
+			echo "$__syz_marker+ ---- end vars_after ----"
+		fi
+		[ "$__syz_vars_before" = "$__syz_vars_after" ]
+	fi
 }
 
-# FIXME: make this check every time 'run' is used
 function check_no_leaked_aliases {
-	echo "$marker ${FUNCNAME[0]}"
-	run alias -p
-	check output_exact "$aliases_before"
+	if [ "$1" = "--setup" ]; then
+		local old_rc="$__syz_rc"
+		local old_o="$__syz_o"
+		do_run alias -p
+		declare -g __syz_aliases_before="$__syz_o"
+		__syz_rc="$old_rc"
+		__syz_o="$old_o"
+	else
+		echo "$__syz_marker ${FUNCNAME[0]}"
+		local old_rc="$__syz_rc"
+		local old_o="$__syz_o"
+		do_run alias -p
+		check output_exact "$__syz_aliases_before"
+		__syz_rc="$old_rc"
+		__syz_o="$old_o"
+	fi
 }
 
-echo "$marker prelim"
+echo "$__syz_marker prelim"
 check envvar_pattern "SYZ_PATH" '^'"$basedir"'/sw$'
 check envvar_unset SYZ_{MODULES,MODULES_ABS,INACTIVE_MODULES}
 
-run alias -p
-aliases_before="$o"
+check no_leaked_vars --setup
+check no_leaked_aliases --setup
 
 echo
-echo "$marker load"
+echo "$__syz_marker load"
 set -e
 . ./syzzle
 set +e
 
+check no_leaked_vars
 check no_leaked_aliases
 
 check envvar_pattern "SYZ_VERSION" '.'
@@ -254,7 +297,6 @@ check envvar_set SYZ_{MODULES,MODULES_ABS,INACTIVE_MODULES}
 check envvar_exact "SYZ_MODULES" ''
 check envvar_exact "SYZ_MODULES_ABS" ''
 check envvar_exact "SYZ_INACTIVE_MODULES" ''
-check no_leaked_global_return_vars
 
 echo
 run syz avail
@@ -267,6 +309,7 @@ check output_exact 'No modules available.'
 for i in $test_pvs; do
 	mkdir -p "$basedir/sw/$i"/{bin,lib}
 done
+unset i
 # FIXME: current and default symlinks
 
 echo
@@ -286,18 +329,18 @@ check output_pattern "version" "$SYZ_VERSION"
 echo
 run syz empty
 check success
-o_empty="$o"
+__syz_o_empty="$__syz_o"
 run syz
 check success
-check output_exact "$o_empty"
+check output_exact "$__syz_o_empty"
 
 echo
 run syz show
 check success
-o_show="$o"
+__syz_o_show="$__syz_o"
 run syz status
 check success
-check output_exact "$o_show"
+check output_exact "$__syz_o_show"
 
 echo
 check modules_not_loaded 'abc/1.0'
