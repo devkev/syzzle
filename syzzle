@@ -124,6 +124,8 @@ function syz::inactive {
 function syz::load {
 	local rc=0
 	local i
+	local _actually_loaded
+	local _resolved_pv _resolved_dir
 	for i; do
 		# FIXME: strip any trailing "/*" when doing this check
 		if __syz::isloaded "$i" _actually_loaded; then
@@ -154,9 +156,6 @@ function syz::load {
 			rc=1
 		fi
 	done
-	unset _actually_loaded
-	unset _resolved_pv
-	unset _resolved_dir
 	return "$rc"
 }
 
