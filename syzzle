@@ -134,26 +134,6 @@ function syz::load {
 }
 
 
-function syz::install {
-	# FIXME: download binaries and put into place
-	# FIXME: possibly compile
-	:
-}
-
-
-function syz::isloaded {
-	local i
-	local _actually_loaded
-	for i; do
-		if __syz::__isloaded "$i" _actually_loaded; then
-			echo "$_actually_loaded loaded"
-		else
-			echo "$i not loaded"
-		fi
-	done
-}
-
-
 function syz::unload {
 	local rc=0
 	local i
@@ -204,6 +184,26 @@ function syz::unload {
 
 function syz::show {
 	# FIXME: show the configuration of the module(s)
+	:
+}
+
+
+function syz::isloaded {
+	local i
+	local _actually_loaded
+	for i; do
+		if __syz::__isloaded "$i" _actually_loaded; then
+			echo "$_actually_loaded loaded"
+		else
+			echo "$i not loaded"
+		fi
+	done
+}
+
+
+function syz::install {
+	# FIXME: download binaries and put into place
+	# FIXME: possibly compile
 	:
 }
 
