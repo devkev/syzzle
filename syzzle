@@ -58,12 +58,7 @@ function syz:: {
 
 function syz::empty {
 	# FIXME: customisable action
-	syz::show
-}
-
-
-function syz::show {
-	syz::status "$@"
+	syz::status
 }
 
 
@@ -204,6 +199,12 @@ function syz::unload {
 		fi
 	done
 	return "$rc"
+}
+
+
+function syz::show {
+	# FIXME: show the configuration of the module(s)
+	:
 }
 
 
