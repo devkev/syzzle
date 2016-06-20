@@ -344,14 +344,14 @@ __syz_o_empty="$__syz_o"
 run syz
 check success
 check output_exact "$__syz_o_empty"
+run syz status
+check success
+check output_exact "$__syz_o_empty"
 
 echo
 run syz show
 check success
 __syz_o_show="$__syz_o"
-run syz status
-check success
-check output_exact "$__syz_o_show"
 
 echo
 check modules_not_loaded 'abc/1.0'
