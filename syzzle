@@ -297,6 +297,7 @@ function syz::version {
 ##
 ##################################################
 
+# FIXME: these pollute the namespace, and should only be present while syzrc files are being sourced
 
 function prepend_path {
 	__syz::__adjust_list_var prepend : "$@"
