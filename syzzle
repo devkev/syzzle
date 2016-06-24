@@ -83,6 +83,14 @@ function __syz::__add_subcommand_help {
 	__syz_subcommands_desc[$name]="$desc"
 }
 
+function __syz::__add_subcommand_help_break {
+	# This is a bit of a cheat, but it works to get a blank line
+	__syz::__add_subcommand_help "" "" ""
+}
+
+
+__syz::__add_subcommand_help "help" "" "This help text"
+
 function syz::help {
 	echo
 	syz::version
@@ -116,6 +124,17 @@ function syz::help {
 		'
 	echo
 }
+
+
+__syz::__add_subcommand_help "version" "" "Report syz version"
+
+function syz::version {
+	echo "syz version $SYZ_VERSION"
+}
+
+
+__syz::__add_subcommand_help_break
+
 
 __syz::__add_subcommand_help "status" "" "Show current status (version, loaded and inactive modules)"
 
@@ -154,6 +173,9 @@ function syz::inactive {
 	__syz::__stringify_array -d "$__syz_nl" _loaded_str _loaded
 	__syz::__columnate "Inactive modules" "No inactive modules." <<< "$_loaded_str"
 }
+
+
+__syz::__add_subcommand_help_break
 
 
 __syz::__add_subcommand_help "load" "module[/version] [...]" "Load the specified module(s)"
@@ -356,13 +378,6 @@ function syz::reload {
 	local src="$SYZ_SOURCE"
 	unset SYZ_SOURCE
 	. "$src"
-}
-
-
-__syz::__add_subcommand_help "version" "" "Report syz version"
-
-function syz::version {
-	echo "syz version $SYZ_VERSION"
 }
 
 
