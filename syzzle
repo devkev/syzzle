@@ -33,6 +33,11 @@ function sw {
 }
 
 
+function em {
+	syz "$@"
+}
+
+
 function syz::dispatch {
 	local cmd="$1" ; shift
 	# FIXME: call syz::empty if cmd is empty
