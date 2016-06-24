@@ -133,6 +133,16 @@ function syz::version {
 }
 
 
+__syz::__add_subcommand_help "reload" "" "Reload syz itself"
+
+function syz::reload {
+	# FIXME: ideally clean up and remove all the private functions also
+	local src="$SYZ_SOURCE"
+	unset SYZ_SOURCE
+	. "$src"
+}
+
+
 __syz::__add_subcommand_help_break
 
 
@@ -368,16 +378,6 @@ function syz::avail {
 	local _str
 	__syz::__stringify_array -d "$__syz_nl" _str _modules
 	__syz::__columnate "Available modules" "No modules available." <<< "$_str"
-}
-
-
-__syz::__add_subcommand_help "reload" "" "Reload syz itself"
-
-function syz::reload {
-	# FIXME: ideally clean up and remove all the private functions also
-	local src="$SYZ_SOURCE"
-	unset SYZ_SOURCE
-	. "$src"
 }
 
 
