@@ -67,6 +67,58 @@ function syz::empty {
 }
 
 
+declare -ag __syz_subcommands=()
+declare -Ag __syz_subcommands_options=()
+declare -Ag __syz_subcommands_desc=()
+
+function __syz::__add_subcommand_help {
+	local name="$1" ; shift
+	local options="$1" ; shift
+	local desc="$*"
+	declare -ag __syz_subcommands
+	declare -Ag __syz_subcommands_options
+	declare -Ag __syz_subcommands_desc
+	__syz_subcommands+=("$name")
+	__syz_subcommands_options[$name]="$options"
+	__syz_subcommands_desc[$name]="$desc"
+}
+
+function syz::help {
+	echo
+	syz::version
+	echo
+
+	echo "Usage: syz <subcommand> [options]"
+	echo
+	echo "Subcommands:"
+	local name
+	for name in "${__syz_subcommands[@]}"; do
+		local options="${__syz_subcommands_options[$name]}"
+		local desc="${__syz_subcommands_desc[$name]}"
+		echo -e "$name${options+ }$options\t$desc"
+	done | awk -F"$(echo -ne '\t')" '
+		{
+			first[NR] = $1;
+			second[NR] = $2;
+			len = length($1);
+			if (NR == 1) {
+				maxlen = len;
+			} else {
+				if (maxlen < len) maxlen = len;
+			}
+		}
+
+		END {
+			for (i = 1; i <= NR; i++) {
+				printf("  %-"maxlen"s  %s\n", first[i], second[i]);
+			}
+		}
+		'
+	echo
+}
+
+__syz::__add_subcommand_help "status" "" "Show current status (version, loaded and inactive modules)"
+
 function syz::status {
 	echo
 	syz::version
@@ -80,6 +132,8 @@ function syz::status {
 }
 
 
+__syz::__add_subcommand_help "loaded" "" "List currently loaded modules"
+
 function syz::loaded {
 	# FIXME: identify orphaned modules and display them differently/separately.
 	# Oprhaned modules are those that have been loaded, but now fail __syz::__is_loadable_dir.
@@ -91,6 +145,8 @@ function syz::loaded {
 }
 
 
+__syz::__add_subcommand_help "inactive" "" "List currently inactive modules"
+
 function syz::inactive {
 	local -a _loaded
 	__syz::__parse_list _loaded "$SYZ_INACTIVE_MODULES"
@@ -99,6 +155,8 @@ function syz::inactive {
 	__syz::__columnate "Inactive modules" "No inactive modules." <<< "$_loaded_str"
 }
 
+
+__syz::__add_subcommand_help "load" "module [...]" "Load the specified module(s)"
 
 function syz::load {
 	local rc=0
@@ -138,6 +196,8 @@ function syz::load {
 	return "$rc"
 }
 
+
+__syz::__add_subcommand_help "unload" "module [...]" "Unload the specified module(s)"
 
 function syz::unload {
 	local rc=0
