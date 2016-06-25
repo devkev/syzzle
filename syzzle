@@ -363,7 +363,7 @@ function syz::unload {
 }
 
 
-__syz::__add_subcommand_help "show" "module[/version] [...]" "(Unimplemented) Show the configuration of the specified module(s)"
+__syz::__add_subcommand_help "show" "module[/version] [...]" "Show the configuration of the specified module(s)"
 
 function syz::show {
 	local rc=0
