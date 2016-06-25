@@ -437,6 +437,16 @@ function append-path {
 }
 
 
+function __syz::__show_function_invocation {
+	local i
+	local s
+	for i; do
+		local this="$(declare -p i)"
+		s="$s ${this#declare -- i=}"
+	done
+	echo "${FUNCNAME[1]}$s"
+}
+
 function bin-dir {
 	case "$__syz_mode" in
 		load)
@@ -446,13 +456,7 @@ function bin-dir {
 			remove-path PATH "$@"
 			;;
 		show)
-			local i
-			local s
-			for i; do
-				local this="$(declare -p i)"
-				s="$s ${this#declare -- i=}"
-			done
-			echo "${FUNCNAME[0]}$s"
+			__syz::__show_function_invocation "$@"
 			;;
 	esac
 }
