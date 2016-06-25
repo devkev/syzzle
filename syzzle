@@ -434,12 +434,18 @@ function __syz::__define_interface_functions {
 	}
 
 	function bin-dir {
+		local i
+		# FIXME: Make this junk be a function (somehow - local -an isn't possible)
+		local -a args
+		for i; do
+			args+=("$(__syz::__absolutify "$i")")
+		done
 		case "$__syz_mode" in
 			load)
-				prepend-path PATH "$@"
+				prepend-path PATH "${args[@]}"
 				;;
 			unload)
-				remove-path PATH "$@"
+				remove-path PATH "${args[@]}"
 				;;
 			show)
 				__syz::__show_function_invocation "$@"
@@ -723,7 +729,6 @@ function __syz::__define_internal_functions {
 		local var="$1" ; shift
 		local i
 		for i; do
-			i="$(__syz::__absolutify "$i")"
 			case "${!var}" in
 				*"$sep$i$sep"*)  ;;  # Already present
 					 "$i$sep"*)  ;;  # Already present
@@ -745,7 +750,6 @@ function __syz::__define_internal_functions {
 		local var="$1" ; shift
 		local i
 		for i; do
-			i="$(__syz::__absolutify "$i")"
 			case "${!var}" in
 				*"$sep$i$sep"*) declare -gx "$var"="${!var/$sep$i$sep/$sep}" ;;
 					 "$i$sep"*) declare -gx "$var"="${!var/#$i$sep}" ;;
