@@ -270,7 +270,7 @@ function syz::load {
 	local _resolved_pv _resolved_dir
 	for i; do
 		# FIXME: strip any trailing "/*" when doing this check
-		if __syz::__isloaded "$i" _actually_loaded; then
+		if __syz::__is_loaded "$i" _actually_loaded; then
 			# FIXME: maybe force reload (ie. unload then reload) it in this case?
 			# FIXME: if already loaded, swap versions (ie. unload first)
 			echo "Module $_actually_loaded is already loaded, skipping"
@@ -310,7 +310,7 @@ function syz::unload {
 	local _actually_loaded
 	local _resolved_pv _resolved_dir
 	for i; do
-		if ! __syz::__isloaded "$i" _actually_loaded; then
+		if ! __syz::__is_loaded "$i" _actually_loaded; then
 			echo "syz: Error: No module named $i is loaded"
 			continue
 		fi
@@ -360,18 +360,22 @@ function syz::show {
 }
 
 
-__syz::__add_subcommand_help "isloaded" "module[/version] [...]" "Show whether or not the specified module(s) are loaded"
+__syz::__add_subcommand_help "is-loaded" "module[/version] [...]" "Show whether or not the specified module(s) are loaded"
 
-function syz::isloaded {
+function syz::is-loaded {
 	local i
 	local _actually_loaded
 	for i; do
-		if __syz::__isloaded "$i" _actually_loaded; then
+		if __syz::__is_loaded "$i" _actually_loaded; then
 			echo "$_actually_loaded loaded"
 		else
 			echo "$i not loaded"
 		fi
 	done
+}
+
+function syz::isloaded {
+	syz::is-loaded "$@"
 }
 
 
@@ -477,7 +481,7 @@ function __syz::__process_dir {
 }
 
 
-function __syz::__isloaded {
+function __syz::__is_loaded {
 	local looking_for="$1" ; shift
 	local ${1+-n} found="$1" ; shift
 	local -a _loaded
