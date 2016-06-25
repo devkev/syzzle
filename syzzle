@@ -290,8 +290,8 @@ function syz::load {
 				fi
 			done
 			# remember that this is loaded
-			append_path SYZ_MODULES "$_resolved_pv"
-			append_path SYZ_MODULES_ABS "$_resolved_dir"
+			append-path SYZ_MODULES "$_resolved_pv"
+			append-path SYZ_MODULES_ABS "$_resolved_dir"
 		else
 			# FIXME: try to install it?
 			echo "syz: No such module: $i"
@@ -332,8 +332,8 @@ function syz::unload {
 				__syz::__process_dir unload "$subdir" "$_resolved_dir/$subdir"
 			done
 			# forget that this was loaded
-			remove_path SYZ_MODULES "$_resolved_pv"
-			remove_path SYZ_MODULES_ABS "$_resolved_dir"
+			remove-path SYZ_MODULES "$_resolved_pv"
+			remove-path SYZ_MODULES_ABS "$_resolved_dir"
 		else
 			# YIKES
 			# Module has been loaded, but now fails __syz::__is_loadable_dir.
@@ -398,23 +398,23 @@ function syz::install {
 
 # FIXME: these pollute the namespace, and should only be present while syzrc files are being sourced
 
-function prepend_path {
+function prepend-path {
 	__syz::__adjust_list_var prepend : "$@"
 }
 
 
-function append_path {
+function append-path {
 	__syz::__adjust_list_var append : "$@"
 }
 
 
-function bin_dir {
-	#prepend_path PATH "$@"
+function bin-dir {
+	#prepend-path PATH "$@"
 	#FIXME: deal better with $mode
 	__syz::__process_dir "$mode" bin "$@"
 }
 
-function remove_path {
+function remove-path {
 	__syz::__remove_list_var : "$@"
 }
 
@@ -450,7 +450,7 @@ function __syz::__process_dir {
 		load)
 			case "$type" in
 				bin)
-					prepend_path PATH "$@"
+					prepend-path PATH "$@"
 					;;
 				lib)
 					;;
@@ -465,7 +465,7 @@ function __syz::__process_dir {
 		unload)
 			case "$type" in
 				bin)
-					remove_path PATH "$@"
+					remove-path PATH "$@"
 					;;
 				lib)
 					;;
