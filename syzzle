@@ -471,8 +471,8 @@ function __syz::__unset_mode {
 
 
 function __syz::__process_dir {
-	local dir="$1" ; shift
-	case "$dir" in
+	local subdir="$1" ; shift
+	case "$subdir" in
 		bin)
 			bin-dir "$@"
 			;;
