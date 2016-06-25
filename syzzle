@@ -285,6 +285,7 @@ function syz::load {
 			# actually load it
 			# FIXME: this should be a function
 			__syz::__set_mode load
+			__syz::__set_basedir "$_resolved_dir"
 			# FIXME: use .syzrc if present
 			# FIXME: use a .syzrc from the parent dir if present
 			local subdir
@@ -297,6 +298,7 @@ function syz::load {
 			append-path SYZ_MODULES "$_resolved_pv"
 			append-path SYZ_MODULES_ABS "$_resolved_dir"
 			__syz::__unset_mode
+			__syz::__unset_basedir
 		else
 			# FIXME: try to install it?
 			echo "syz: No such module: $i"
@@ -330,6 +332,7 @@ function syz::unload {
 			# actually unload it
 			# FIXME: this should be a function
 			__syz::__set_mode unload
+			__syz::__set_basedir "$_resolved_dir"
 			# FIXME: use .syzrc if present
 			# FIXME: use a .syzrc from the parent dir if present
 			local subdir
@@ -341,6 +344,7 @@ function syz::unload {
 			remove-path SYZ_MODULES "$_resolved_pv"
 			remove-path SYZ_MODULES_ABS "$_resolved_dir"
 			__syz::__unset_mode
+			__syz::__unset_basedir
 		else
 			# YIKES
 			# Module has been loaded, but now fails __syz::__is_loadable_dir.
@@ -371,6 +375,7 @@ function syz::show {
 			# actually show it
 			# FIXME: this should be a function
 			__syz::__set_mode show
+			__syz::__set_basedir "$_resolved_dir"
 			# FIXME: use .syzrc if present
 			# FIXME: use a .syzrc from the parent dir if present
 			local subdir
@@ -380,6 +385,7 @@ function syz::show {
 				fi
 			done
 			__syz::__unset_mode
+			__syz::__unset_basedir
 		else
 			echo "syz: No such module: $i"
 			rc=1
@@ -497,6 +503,16 @@ function __syz::__set_mode {
 
 function __syz::__unset_mode {
 	unset __syz_mode
+}
+
+
+function __syz::__set_basedir {
+	declare -g __syz_basedir="$1"
+}
+
+
+function __syz::__unset_basedir {
+	unset __syz_basedir
 }
 
 
