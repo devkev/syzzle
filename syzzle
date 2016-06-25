@@ -22,385 +22,385 @@ SYZ_VERSION=0.0.2
 
 function __syz::__define_external_functions {
 
-unset -f __syz::__define_external_functions
+	unset -f __syz::__define_external_functions
 
-function syz {
-	if ! __syz::__rerun_if_updated "$@"; then
-		syz::dispatch "$@"
-	fi
-}
-
-
-function sw {
-	syz "$@"
-}
-
-
-function em {
-	syz "$@"
-}
-
-
-function syz::dispatch {
-	local cmd="$1" ; shift
-	# FIXME: call syz::empty if cmd is empty
-	# FIXME: call syz::unknown if syz_$cmd doesn't exist
-	syz::"$cmd" "$@"
-}
-
-
-# Default function when an unknown sub-command is attempted to be run
-function syz::unknown {
-	# FIXME: customisable action
-	# FIXME: better error message if syz_$cmd doesn't exist
-	# FIXME: default action if syz_$cmd doesn't exist should be "load", eg. "syz mongodb/2.6.11" equiv to "syz load mongodb/2.6.11"
-	syz::load "$@"
-}
-
-
-# Default function when just "syz" is run
-function syz:: {
-	syz::empty
-}
-
-
-function syz::empty {
-	# FIXME: customisable action
-	syz::status
-}
-
-
-__syz::__add_subcommand_help "help" "" "This help text"
-
-function syz::help {
-	echo
-	syz::version
-	echo
-
-	echo "Usage: syz <subcommand> [options]"
-	echo
-	echo "Subcommands:"
-	local name
-	# FIXME: word-wrap at ${COLUMNS:-80}
-	for name in "${__syz_subcommands[@]}"; do
-		if [ "$name" = _ ]; then
-			echo
-		else
-			local options="${__syz_subcommands_options[$name]}"
-			local desc="${__syz_subcommands_desc[$name]}"
-			echo -e "$name${options+ }$options\t$desc"
+	function syz {
+		if ! __syz::__rerun_if_updated "$@"; then
+			syz::dispatch "$@"
 		fi
-	done | awk -F"$(echo -ne '\t')" '
-		{
-			first[NR] = $1;
-			second[NR] = $2;
-			len = length($1);
-			if (NR == 1) {
-				maxlen = len;
-			} else {
-				if (maxlen < len) maxlen = len;
+	}
+
+
+	function sw {
+		syz "$@"
+	}
+
+
+	function em {
+		syz "$@"
+	}
+
+
+	function syz::dispatch {
+		local cmd="$1" ; shift
+		# FIXME: call syz::empty if cmd is empty
+		# FIXME: call syz::unknown if syz_$cmd doesn't exist
+		syz::"$cmd" "$@"
+	}
+
+
+	# Default function when an unknown sub-command is attempted to be run
+	function syz::unknown {
+		# FIXME: customisable action
+		# FIXME: better error message if syz_$cmd doesn't exist
+		# FIXME: default action if syz_$cmd doesn't exist should be "load", eg. "syz mongodb/2.6.11" equiv to "syz load mongodb/2.6.11"
+		syz::load "$@"
+	}
+
+
+	# Default function when just "syz" is run
+	function syz:: {
+		syz::empty
+	}
+
+
+	function syz::empty {
+		# FIXME: customisable action
+		syz::status
+	}
+
+
+	__syz::__add_subcommand_help "help" "" "This help text"
+
+	function syz::help {
+		echo
+		syz::version
+		echo
+
+		echo "Usage: syz <subcommand> [options]"
+		echo
+		echo "Subcommands:"
+		local name
+		# FIXME: word-wrap at ${COLUMNS:-80}
+		for name in "${__syz_subcommands[@]}"; do
+			if [ "$name" = _ ]; then
+				echo
+			else
+				local options="${__syz_subcommands_options[$name]}"
+				local desc="${__syz_subcommands_desc[$name]}"
+				echo -e "$name${options+ }$options\t$desc"
+			fi
+		done | awk -F"$(echo -ne '\t')" '
+			{
+				first[NR] = $1;
+				second[NR] = $2;
+				len = length($1);
+				if (NR == 1) {
+					maxlen = len;
+				} else {
+					if (maxlen < len) maxlen = len;
+				}
 			}
-		}
 
-		END {
-			for (i = 1; i <= NR; i++) {
-				printf("  %-"maxlen"s  %s\n", first[i], second[i]);
+			END {
+				for (i = 1; i <= NR; i++) {
+					printf("  %-"maxlen"s  %s\n", first[i], second[i]);
+				}
 			}
-		}
-		'
-	echo
-}
+			'
+		echo
+	}
 
 
-__syz::__add_subcommand_help "version" "" "Report syz version"
+	__syz::__add_subcommand_help "version" "" "Report syz version"
 
-function syz::version {
-	echo "syz version $SYZ_VERSION"
-}
-
-
-__syz::__add_subcommand_help "restart" "" "Restart syz itself"
-
-function syz::restart {
-	# FIXME: ideally clean up and remove all the private functions also
-	local src="$SYZ_SOURCE"
-	unset SYZ_SOURCE
-	. "$src"
-}
+	function syz::version {
+		echo "syz version $SYZ_VERSION"
+	}
 
 
-__syz::__add_subcommand_help_break
+	__syz::__add_subcommand_help "restart" "" "Restart syz itself"
+
+	function syz::restart {
+		# FIXME: ideally clean up and remove all the private functions also
+		local src="$SYZ_SOURCE"
+		unset SYZ_SOURCE
+		. "$src"
+	}
 
 
-__syz::__add_subcommand_help "status" "" "Show current status (version, loaded and inactive modules)"
-
-function syz::status {
-	echo
-	syz::version
-	echo
-
-	syz::loaded "$@"
-
-	if [ "$SYZ_INACTIVE_MODULES" ]; then
-		syz::inactive "$@"
-	fi
-}
+	__syz::__add_subcommand_help_break
 
 
-__syz::__add_subcommand_help "loaded" "" "List currently loaded modules"
+	__syz::__add_subcommand_help "status" "" "Show current status (version, loaded and inactive modules)"
 
-function syz::loaded {
-	# FIXME: identify orphaned modules and display them differently/separately.
-	# Oprhaned modules are those that have been loaded, but now fail __syz::__is_loadable_dir.
-	local -a _loaded
-	__syz::__parse_list _loaded "$SYZ_MODULES"
-	local _loaded_str
-	__syz::__stringify_array -d "$__syz_nl" _loaded_str _loaded
-	__syz::__columnate "Currently loaded modules" "No modules currently loaded." <<< "$_loaded_str"
-}
+	function syz::status {
+		echo
+		syz::version
+		echo
 
+		syz::loaded "$@"
 
-__syz::__add_subcommand_help "inactive" "" "List currently inactive modules"
-
-function syz::inactive {
-	local -a _loaded
-	__syz::__parse_list _loaded "$SYZ_INACTIVE_MODULES"
-	local _loaded_str
-	__syz::__stringify_array -d "$__syz_nl" _loaded_str _loaded
-	__syz::__columnate "Inactive modules" "No inactive modules." <<< "$_loaded_str"
-}
+		if [ "$SYZ_INACTIVE_MODULES" ]; then
+			syz::inactive "$@"
+		fi
+	}
 
 
-__syz::__add_subcommand_help "avail" "" "List modules available for loading"
+	__syz::__add_subcommand_help "loaded" "" "List currently loaded modules"
 
-function syz::avail {
-	# FIXME: accept an arg which is a prefix-match to limit things to (defaults to "")
-	# FIXME: accept multiple args
-	local basedir
-	local -a _modules=()
-	local -a _syz_path
-	__syz::__parse_list _syz_path "$SYZ_PATH"
-	if [ "$SYZ_PATH" ]; then
-		__syz::__set_nullglob
-		for basedir in "${_syz_path[@]}"; do
-			local pkgdir
-			for pkgdir in "$basedir"/*; do
-				local pkgname="${pkgdir#$basedir/}"
+	function syz::loaded {
+		# FIXME: identify orphaned modules and display them differently/separately.
+		# Oprhaned modules are those that have been loaded, but now fail __syz::__is_loadable_dir.
+		local -a _loaded
+		__syz::__parse_list _loaded "$SYZ_MODULES"
+		local _loaded_str
+		__syz::__stringify_array -d "$__syz_nl" _loaded_str _loaded
+		__syz::__columnate "Currently loaded modules" "No modules currently loaded." <<< "$_loaded_str"
+	}
 
-				# check for current and default
-				local current=""
-				if [ -L "$pkgdir/current" ]; then
-					local currentdir="$(readlink -f "$pkgdir/current")"
-					if [ -d "$currentdir" ]; then
-						current="$(readlink "$pkgdir/current")"
+
+	__syz::__add_subcommand_help "inactive" "" "List currently inactive modules"
+
+	function syz::inactive {
+		local -a _loaded
+		__syz::__parse_list _loaded "$SYZ_INACTIVE_MODULES"
+		local _loaded_str
+		__syz::__stringify_array -d "$__syz_nl" _loaded_str _loaded
+		__syz::__columnate "Inactive modules" "No inactive modules." <<< "$_loaded_str"
+	}
+
+
+	__syz::__add_subcommand_help "avail" "" "List modules available for loading"
+
+	function syz::avail {
+		# FIXME: accept an arg which is a prefix-match to limit things to (defaults to "")
+		# FIXME: accept multiple args
+		local basedir
+		local -a _modules=()
+		local -a _syz_path
+		__syz::__parse_list _syz_path "$SYZ_PATH"
+		if [ "$SYZ_PATH" ]; then
+			__syz::__set_nullglob
+			for basedir in "${_syz_path[@]}"; do
+				local pkgdir
+				for pkgdir in "$basedir"/*; do
+					local pkgname="${pkgdir#$basedir/}"
+
+					# check for current and default
+					local current=""
+					if [ -L "$pkgdir/current" ]; then
+						local currentdir="$(readlink -f "$pkgdir/current")"
+						if [ -d "$currentdir" ]; then
+							current="$(readlink "$pkgdir/current")"
+						fi
 					fi
-				fi
 
-				local default=""
-				if [ -L "$pkgdir/default" ]; then
-					local defaultdir="$(readlink -f "$pkgdir/default")"
-					if [ -d "$defaultdir" ]; then
-						default="$(readlink "$pkgdir/default")"
+					local default=""
+					if [ -L "$pkgdir/default" ]; then
+						local defaultdir="$(readlink -f "$pkgdir/default")"
+						if [ -d "$defaultdir" ]; then
+							default="$(readlink "$pkgdir/default")"
+						fi
 					fi
-				fi
 
-				local versiondir
-				for versiondir in "$pkgdir"/*; do
-					local version="${versiondir#$pkgdir/}"
+					local versiondir
+					for versiondir in "$pkgdir"/*; do
+						local version="${versiondir#$pkgdir/}"
 
-					if __syz::__fancy_output; then
-						if [ "$version" = current -a "$current" ]; then
-							: # ignore
-						elif [ "$version" = default -a "$default" ]; then
-							: # ignore
-						elif __syz::__is_loadable_dir "$versiondir"; then
-							local suffix=""
-							if [ "$current" = "$version" ]; then
-								suffix+=" (current)"
-							elif [ "$default" = "$version" ]; then
-								suffix+=" (default)"
+						if __syz::__fancy_output; then
+							if [ "$version" = current -a "$current" ]; then
+								: # ignore
+							elif [ "$version" = default -a "$default" ]; then
+								: # ignore
+							elif __syz::__is_loadable_dir "$versiondir"; then
+								local suffix=""
+								if [ "$current" = "$version" ]; then
+									suffix+=" (current)"
+								elif [ "$default" = "$version" ]; then
+									suffix+=" (default)"
+								fi
+								_modules+=("$pkgname/$version$suffix")
+							else
+								# not loadable
+								: # ignore
 							fi
-							_modules+=("$pkgname/$version$suffix")
 						else
-							# not loadable
-							: # ignore
+							if __syz::__is_loadable_dir "$versiondir"; then
+								_modules+=("$pkgname/$version")
+							fi
 						fi
-					else
-						if __syz::__is_loadable_dir "$versiondir"; then
-							_modules+=("$pkgname/$version")
-						fi
-					fi
+					done
 				done
 			done
+			__syz::__restore_nullglob
+		fi
+		local _str
+		__syz::__stringify_array -d "$__syz_nl" _str _modules
+		__syz::__columnate "Available modules" "No modules available." <<< "$_str"
+	}
+
+
+	__syz::__add_subcommand_help_break
+
+
+	__syz::__add_subcommand_help "load" "module[/version] [...]" "Load the specified module(s)"
+
+	function syz::load {
+		local rc=0
+		local i
+		local _actually_loaded
+		local _resolved_pv _resolved_dir
+		for i; do
+			# FIXME: strip any trailing "/*" when doing this check
+			if __syz::__is_loaded "$i" _actually_loaded; then
+				# FIXME: maybe force reload (ie. unload then reload) it in this case?
+				# FIXME: if already loaded, swap versions (ie. unload first)
+				echo "Module $_actually_loaded is already loaded, skipping"
+				continue
+			fi
+
+			if __syz::__resolve_loadable_dir "$i" _resolved_pv _resolved_dir; then
+				echo "Loading $_resolved_pv from $_resolved_dir"
+				# actually load it
+				# FIXME: this should be a function
+				__syz::__set_mode load
+				__syz::__set_basedir "$_resolved_dir"
+				# FIXME: use .syzrc if present
+				# FIXME: use a .syzrc from the parent dir if present
+				local subdir
+				for subdir in "${__syz_subdirs[@]}"; do
+					if [ -d "$_resolved_dir/$subdir" ]; then
+						__syz::__process_dir "$subdir"
+					fi
+				done
+				# remember that this is loaded
+				append-path SYZ_MODULES "$_resolved_pv"
+				append-path SYZ_MODULES_ABS "$_resolved_dir"
+				__syz::__unset_mode
+				__syz::__unset_basedir
+			else
+				# FIXME: try to install it?
+				echo "syz: No such module: $i"
+				rc=1
+			fi
 		done
-		__syz::__restore_nullglob
-	fi
-	local _str
-	__syz::__stringify_array -d "$__syz_nl" _str _modules
-	__syz::__columnate "Available modules" "No modules available." <<< "$_str"
-}
+		return "$rc"
+	}
 
 
-__syz::__add_subcommand_help_break
+	__syz::__add_subcommand_help "unload" "module[/version] [...]" "Unload the specified module(s)"
 
+	function syz::unload {
+		local rc=0
+		local i
+		local _actually_loaded
+		local _resolved_pv _resolved_dir
+		for i; do
+			if ! __syz::__is_loaded "$i" _actually_loaded; then
+				echo "syz: Error: No module named $i is loaded"
+				continue
+			fi
+			# use the full loaded module name. eg. mongodb/2.4.0 is loaded, user
+			# does "unload mongodb", we need to be smart enough to figure out that
+			# "mongodb/2.4.0" is what should be removed, not "mongodb" (which is
+			# not a real/actual module name).
 
-__syz::__add_subcommand_help "load" "module[/version] [...]" "Load the specified module(s)"
-
-function syz::load {
-	local rc=0
-	local i
-	local _actually_loaded
-	local _resolved_pv _resolved_dir
-	for i; do
-		# FIXME: strip any trailing "/*" when doing this check
-		if __syz::__is_loaded "$i" _actually_loaded; then
-			# FIXME: maybe force reload (ie. unload then reload) it in this case?
-			# FIXME: if already loaded, swap versions (ie. unload first)
-			echo "Module $_actually_loaded is already loaded, skipping"
-			continue
-		fi
-
-		if __syz::__resolve_loadable_dir "$i" _resolved_pv _resolved_dir; then
-			echo "Loading $_resolved_pv from $_resolved_dir"
-			# actually load it
-			# FIXME: this should be a function
-			__syz::__set_mode load
-			__syz::__set_basedir "$_resolved_dir"
-			# FIXME: use .syzrc if present
-			# FIXME: use a .syzrc from the parent dir if present
-			local subdir
-			for subdir in "${__syz_subdirs[@]}"; do
-				if [ -d "$_resolved_dir/$subdir" ]; then
+			# FIXME: do not search for the right dir. instead, use the dir from $SYZ_MODULES_ABS
+			if __syz::__resolve_loadable_dir "$_actually_loaded" _resolved_pv _resolved_dir; then
+				echo "Unloading $_resolved_pv from $_resolved_dir"
+				# actually unload it
+				# FIXME: this should be a function
+				__syz::__set_mode unload
+				__syz::__set_basedir "$_resolved_dir"
+				# FIXME: use .syzrc if present
+				# FIXME: use a .syzrc from the parent dir if present
+				local subdir
+				for subdir in "${__syz_subdirs[@]}"; do
+					# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
 					__syz::__process_dir "$subdir"
-				fi
-			done
-			# remember that this is loaded
-			append-path SYZ_MODULES "$_resolved_pv"
-			append-path SYZ_MODULES_ABS "$_resolved_dir"
-			__syz::__unset_mode
-			__syz::__unset_basedir
-		else
-			# FIXME: try to install it?
-			echo "syz: No such module: $i"
-			rc=1
-		fi
-	done
-	return "$rc"
-}
+				done
+				# forget that this was loaded
+				remove-path SYZ_MODULES "$_resolved_pv"
+				remove-path SYZ_MODULES_ABS "$_resolved_dir"
+				__syz::__unset_mode
+				__syz::__unset_basedir
+			else
+				# YIKES
+				# Module has been loaded, but now fails __syz::__is_loadable_dir.
+				# This is an "orphaned" module.
+				# The files have actually been removed from the previous location on disk, oh well, too bad so sad.
+				#
+				# This is similar to "inactive" modules.
+				# This is where $SYZ_PATH has been adjusted such that the module can no longer be resolved.
+				# The module gets auto-unloaded at that point, and moved from $SYZ_MODULES to $SYZ_INACTIVE_MODULES.
+				# When $SYZ_PATH gets added to, any inactive modules that can now be resolved, will be auto loaded.
+				echo "syz: No such module: $i"
+				rc=1
+			fi
+		done
+		return "$rc"
+	}
 
 
-__syz::__add_subcommand_help "unload" "module[/version] [...]" "Unload the specified module(s)"
+	__syz::__add_subcommand_help "show" "module[/version] [...]" "Show the configuration of the specified module(s)"
 
-function syz::unload {
-	local rc=0
-	local i
-	local _actually_loaded
-	local _resolved_pv _resolved_dir
-	for i; do
-		if ! __syz::__is_loaded "$i" _actually_loaded; then
-			echo "syz: Error: No module named $i is loaded"
-			continue
-		fi
-		# use the full loaded module name. eg. mongodb/2.4.0 is loaded, user
-		# does "unload mongodb", we need to be smart enough to figure out that
-		# "mongodb/2.4.0" is what should be removed, not "mongodb" (which is
-		# not a real/actual module name).
-
-		# FIXME: do not search for the right dir. instead, use the dir from $SYZ_MODULES_ABS
-		if __syz::__resolve_loadable_dir "$_actually_loaded" _resolved_pv _resolved_dir; then
-			echo "Unloading $_resolved_pv from $_resolved_dir"
-			# actually unload it
-			# FIXME: this should be a function
-			__syz::__set_mode unload
-			__syz::__set_basedir "$_resolved_dir"
-			# FIXME: use .syzrc if present
-			# FIXME: use a .syzrc from the parent dir if present
-			local subdir
-			for subdir in "${__syz_subdirs[@]}"; do
-				# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
-				__syz::__process_dir "$subdir"
-			done
-			# forget that this was loaded
-			remove-path SYZ_MODULES "$_resolved_pv"
-			remove-path SYZ_MODULES_ABS "$_resolved_dir"
-			__syz::__unset_mode
-			__syz::__unset_basedir
-		else
-			# YIKES
-			# Module has been loaded, but now fails __syz::__is_loadable_dir.
-			# This is an "orphaned" module.
-			# The files have actually been removed from the previous location on disk, oh well, too bad so sad.
-			#
-			# This is similar to "inactive" modules.
-			# This is where $SYZ_PATH has been adjusted such that the module can no longer be resolved.
-			# The module gets auto-unloaded at that point, and moved from $SYZ_MODULES to $SYZ_INACTIVE_MODULES.
-			# When $SYZ_PATH gets added to, any inactive modules that can now be resolved, will be auto loaded.
-			echo "syz: No such module: $i"
-			rc=1
-		fi
-	done
-	return "$rc"
-}
+	function syz::show {
+		local rc=0
+		local i
+		local _resolved_pv _resolved_dir
+		for i; do
+			if __syz::__resolve_loadable_dir "$i" _resolved_pv _resolved_dir; then
+				echo "# $_resolved_pv from $_resolved_dir"
+				# actually show it
+				# FIXME: this should be a function
+				__syz::__set_mode show
+				__syz::__set_basedir "$_resolved_dir"
+				# FIXME: use .syzrc if present
+				# FIXME: use a .syzrc from the parent dir if present
+				local subdir
+				for subdir in "${__syz_subdirs[@]}"; do
+					if [ -d "$_resolved_dir/$subdir" ]; then
+						__syz::__process_dir "$subdir"
+					fi
+				done
+				__syz::__unset_mode
+				__syz::__unset_basedir
+			else
+				echo "syz: No such module: $i"
+				rc=1
+			fi
+		done
+		return "$rc"
+	}
 
 
-__syz::__add_subcommand_help "show" "module[/version] [...]" "Show the configuration of the specified module(s)"
+	__syz::__add_subcommand_help "is-loaded" "module[/version] [...]" "Show whether or not the specified module(s) are loaded"
 
-function syz::show {
-	local rc=0
-	local i
-	local _resolved_pv _resolved_dir
-	for i; do
-		if __syz::__resolve_loadable_dir "$i" _resolved_pv _resolved_dir; then
-			echo "# $_resolved_pv from $_resolved_dir"
-			# actually show it
-			# FIXME: this should be a function
-			__syz::__set_mode show
-			__syz::__set_basedir "$_resolved_dir"
-			# FIXME: use .syzrc if present
-			# FIXME: use a .syzrc from the parent dir if present
-			local subdir
-			for subdir in "${__syz_subdirs[@]}"; do
-				if [ -d "$_resolved_dir/$subdir" ]; then
-					__syz::__process_dir "$subdir"
-				fi
-			done
-			__syz::__unset_mode
-			__syz::__unset_basedir
-		else
-			echo "syz: No such module: $i"
-			rc=1
-		fi
-	done
-	return "$rc"
-}
+	function syz::is-loaded {
+		local i
+		local _actually_loaded
+		for i; do
+			if __syz::__is_loaded "$i" _actually_loaded; then
+				echo "$_actually_loaded loaded"
+			else
+				echo "$i not loaded"
+			fi
+		done
+	}
+
+	function syz::isloaded {
+		syz::is-loaded "$@"
+	}
 
 
-__syz::__add_subcommand_help "is-loaded" "module[/version] [...]" "Show whether or not the specified module(s) are loaded"
+	__syz::__add_subcommand_help "install" "module[/version] [...]" "(Unimplemented) Download and install the specified module(s)"
 
-function syz::is-loaded {
-	local i
-	local _actually_loaded
-	for i; do
-		if __syz::__is_loaded "$i" _actually_loaded; then
-			echo "$_actually_loaded loaded"
-		else
-			echo "$i not loaded"
-		fi
-	done
-}
-
-function syz::isloaded {
-	syz::is-loaded "$@"
-}
-
-
-__syz::__add_subcommand_help "install" "module[/version] [...]" "(Unimplemented) Download and install the specified module(s)"
-
-function syz::install {
-	# FIXME: download binaries and put into place
-	# FIXME: possibly compile
-	:
-}
+	function syz::install {
+		# FIXME: download binaries and put into place
+		# FIXME: possibly compile
+		:
+	}
 
 
 }
@@ -417,35 +417,35 @@ function syz::install {
 
 function __syz::__define_interface_functions {
 
-unset -f __syz::__define_interface_functions
+	unset -f __syz::__define_interface_functions
 
-function prepend-path {
-	__syz::__adjust_list_var prepend : "$@"
-}
-
-
-function append-path {
-	__syz::__adjust_list_var append : "$@"
-}
+	function prepend-path {
+		__syz::__adjust_list_var prepend : "$@"
+	}
 
 
-function remove-path {
-	__syz::__remove_list_var : "$@"
-}
+	function append-path {
+		__syz::__adjust_list_var append : "$@"
+	}
 
-function bin-dir {
-	case "$__syz_mode" in
-		load)
-			prepend-path PATH "$@"
-			;;
-		unload)
-			remove-path PATH "$@"
-			;;
-		show)
-			__syz::__show_function_invocation "$@"
-			;;
-	esac
-}
+
+	function remove-path {
+		__syz::__remove_list_var : "$@"
+	}
+
+	function bin-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path PATH "$@"
+				;;
+			unload)
+				remove-path PATH "$@"
+				;;
+			show)
+				__syz::__show_function_invocation "$@"
+				;;
+		esac
+	}
 
 }
 
@@ -460,301 +460,301 @@ function bin-dir {
 
 function __syz::__define_internal_functions {
 
-unset -f __syz::__define_internal_functions
+	unset -f __syz::__define_internal_functions
 
 
-declare -ag __syz_subcommands=()
-declare -Ag __syz_subcommands_options=()
-declare -Ag __syz_subcommands_desc=()
+	declare -ag __syz_subcommands=()
+	declare -Ag __syz_subcommands_options=()
+	declare -Ag __syz_subcommands_desc=()
 
-function __syz::__add_subcommand_help {
-	local name="$1" ; shift
-	local options="$1" ; shift
-	local desc="$*"
-	declare -ag __syz_subcommands
-	declare -Ag __syz_subcommands_options
-	declare -Ag __syz_subcommands_desc
-	__syz_subcommands+=("$name")
-	__syz_subcommands_options[$name]="$options"
-	__syz_subcommands_desc[$name]="$desc"
-}
+	function __syz::__add_subcommand_help {
+		local name="$1" ; shift
+		local options="$1" ; shift
+		local desc="$*"
+		declare -ag __syz_subcommands
+		declare -Ag __syz_subcommands_options
+		declare -Ag __syz_subcommands_desc
+		__syz_subcommands+=("$name")
+		__syz_subcommands_options[$name]="$options"
+		__syz_subcommands_desc[$name]="$desc"
+	}
 
-function __syz::__add_subcommand_help_break {
-	__syz::__add_subcommand_help "_" "" ""
-}
-
-
-function __syz::__rerun_if_updated {
-	# FIXME: use a hash of the file contents instead
-	local modtime="$(stat -L -c '%Y' "$SYZ_SOURCE")"
-	if [ "$SYZ_SOURCED_AT" -a "$modtime" -a "$modtime" -gt "$SYZ_SOURCED_AT" ]; then
-		echo "syz: updated, auto-reloading..." 1>&2
-		echo 1>&2
-		syz::restart
-		# FIXME: the re-call of self should be done by the caller, who can simply do "$0" "$@"
-		syz "$@"
-		return 0
-	fi
-	return 1
-}
+	function __syz::__add_subcommand_help_break {
+		__syz::__add_subcommand_help "_" "" ""
+	}
 
 
-function __syz::__set_mode {
-	declare -g __syz_mode="$1"
-}
-
-
-function __syz::__unset_mode {
-	unset __syz_mode
-}
-
-
-function __syz::__set_basedir {
-	declare -g __syz_basedir="$1"
-}
-
-
-function __syz::__unset_basedir {
-	unset __syz_basedir
-}
-
-
-function __syz::__process_dir {
-	local subdir="$1" ; shift
-	case "$subdir" in
-		bin)
-			bin-dir "$subdir"
-			;;
-		lib)
-			;;
-		share/man|man)
-			;;
-		share/pkgconfig)
-			;;
-		sw)
-			;;
-	esac
-}
-
-
-function __syz::__show_function_invocation {
-	local i
-	local s
-	for i; do
-		local this="$(declare -p i)"
-		s="$s ${this#declare -- i=}"
-	done
-	echo "${FUNCNAME[1]}$s"
-}
-
-function __syz::__is_loaded {
-	local looking_for="$1" ; shift
-	local ${1+-n} found="$1" ; shift
-	local -a _loaded
-	__syz::__parse_list _loaded "$SYZ_MODULES"
-	local i
-	local rc=1
-	for i in "${_loaded[@]}"; do
-		case "$i" in
-			"$looking_for"|"$looking_for"/*)
-				found="$i"
-				rc=0
-				break
-				;;
-		esac
-	done
-	return "$rc"
-}
-
-
-function __syz::__resolve_loadable_dir {
-	# FIXME: if no trailing "/<version>", then figure out and use the default version
-	local target="$1" ; shift
-	local ${1+-n} output_pv="$1" ; shift   # "pv" == "<pkgname>/<version>"
-	local ${1+-n} output_dir="$1" ; shift
-	local basedir
-	local rc=1
-	local -a _syz_path
-	__syz::__parse_list _syz_path "$SYZ_PATH"
-	if [ "$SYZ_PATH" ]; then
-		__syz::__set_nullglob
-		for basedir in "${_syz_path[@]}"; do
-			if __syz::__is_loadable_dir "$basedir/$target"; then
-				output_pv="$target"
-				output_dir="$basedir/$target"
-				rc=0
-				break
-			fi
-		done
-		__syz::__restore_nullglob
-	fi
-	return "$rc"
-}
-
-
-declare -a __syz_nullglob_stack
-
-function __syz::__set_nullglob {
-	__syz_nullglob_stack+=("$(shopt -p nullglob || true)")
-	shopt -s nullglob
-}
-
-
-function __syz::__restore_nullglob {
-	eval "${__syz_nullglob_stack[${#__syz_nullglob_stack[@]}-1]}"
-	unset __syz_nullglob_stack[${#__syz_nullglob_stack[@]}-1]
-}
-
-
-function __syz::__fancy_output {
-	# FIXME: allow the user to override
-	# Fancy output for terminals, plain otherwise
-	tty -s 0<&1
-}
-
-function __syz::__columnate {
-	local header="$1" ; shift
-	local emptymsg="$1" ; shift
-	local output="$(cat "$@")"
-	if __syz::__fancy_output; then
-		if [ "$output" ]; then
-			if [ "$header" ]; then
-				echo
-				echo "$header"
-				echo "${header//?/-}-"
-				echo
-			fi
-			local numlines=0
-			local dummy
-			while read dummy; do
-				numlines=$(($numlines + 1))
-			done <<< "$output"
-			awk -v numlines="$numlines" 'NF > 0 { printf("%"length(numlines)"s) %s\n", NR, $0); }' <<< "$output" | column
-			if [ "$header" ]; then
-				echo
-			fi
-		else
-			if [ "$emptymsg" ]; then
-				echo "$emptymsg"
-				echo
-			fi
-		fi
-	else
-		if [ "$output" ]; then
-			echo "$output"
-		fi
-	fi
-}
-
-
-function __syz::__is_loadable_dir {
-	# check for a valid subdir or .syzrc
-	# FIXME: .syzrc in the parent dir is also acceptable
-	if [ -r "$1/.syzrc" ]; then
-		return 0
-	fi
-	local i
-	for i in "${__syz_subdirs[@]}"; do
-		if [ -d "$1/$i" ]; then
+	function __syz::__rerun_if_updated {
+		# FIXME: use a hash of the file contents instead
+		local modtime="$(stat -L -c '%Y' "$SYZ_SOURCE")"
+		if [ "$SYZ_SOURCED_AT" -a "$modtime" -a "$modtime" -gt "$SYZ_SOURCED_AT" ]; then
+			echo "syz: updated, auto-reloading..." 1>&2
+			echo 1>&2
+			syz::restart
+			# FIXME: the re-call of self should be done by the caller, who can simply do "$0" "$@"
+			syz "$@"
 			return 0
 		fi
-	done
-	return 1
-}
+		return 1
+	}
 
 
-function __syz::__parse_list {
-	local delim=:
-	if [ x"$1" = x"-d" ]; then
-		delim="$2"
-		shift 2
-	fi
-	local -n output="$1" ; shift
-	local old_IFS="$IFS"
-	IFS="$delim"
-	output=()
-	local i
-	for i in $1; do
-		output+=("$i")
-	done
-	local rc="$?"
-	IFS="$old_IFS"
-	return "$rc"
-}
+	function __syz::__set_mode {
+		declare -g __syz_mode="$1"
+	}
 
 
-function __syz::__stringify_array {
-	local delim=:
-	if [ x"$1" = x"-d" ]; then
-		delim="$2"
-		shift 2
-	fi
-	local -n output="$1" ; shift
-	local -n array="$1" ; shift
-	local old_IFS="$IFS"
-	IFS="$delim"
-	output="${array[*]}"
-	local rc="$?"
-	IFS="$old_IFS"
-	return "$rc"
-}
+	function __syz::__unset_mode {
+		unset __syz_mode
+	}
 
 
-function __syz::__absolutify {
-	# FIXME: fix this to return via a local -n variable (to avoid forking)
-	if [ "$__syz_basedir" ]; then
-		case "$1" in
-			/*)
-				echo "$1"
+	function __syz::__set_basedir {
+		declare -g __syz_basedir="$1"
+	}
+
+
+	function __syz::__unset_basedir {
+		unset __syz_basedir
+	}
+
+
+	function __syz::__process_dir {
+		local subdir="$1" ; shift
+		case "$subdir" in
+			bin)
+				bin-dir "$subdir"
 				;;
-			*)
-				echo "$__syz_basedir/$1"
+			lib)
+				;;
+			share/man|man)
+				;;
+			share/pkgconfig)
+				;;
+			sw)
 				;;
 		esac
-	else
-		echo "$1"
-	fi
-}
+	}
 
 
-function __syz::__adjust_list_var {
-	local type="$1" ; shift
-	local sep="$1" ; shift
-	local var="$1" ; shift
-	local i
-	for i; do
-		i="$(__syz::__absolutify "$i")"
-		case "${!var}" in
-			*"$sep$i$sep"*)  ;;  # Already present
-			     "$i$sep"*)  ;;  # Already present
-			*"$sep$i")       ;;  # Already present
-			     "$i")       ;;  # Already present
-			*)
-				case "$type" in
-					prepend) declare -gx "$var"="$i${!var:+$sep}${!var}" ;;
-					append)  declare -gx "$var"="${!var}${!var:+$sep}$i" ;;
-				esac
-				;;
-		esac
-	done
-}
+	function __syz::__show_function_invocation {
+		local i
+		local s
+		for i; do
+			local this="$(declare -p i)"
+			s="$s ${this#declare -- i=}"
+		done
+		echo "${FUNCNAME[1]}$s"
+	}
+
+	function __syz::__is_loaded {
+		local looking_for="$1" ; shift
+		local ${1+-n} found="$1" ; shift
+		local -a _loaded
+		__syz::__parse_list _loaded "$SYZ_MODULES"
+		local i
+		local rc=1
+		for i in "${_loaded[@]}"; do
+			case "$i" in
+				"$looking_for"|"$looking_for"/*)
+					found="$i"
+					rc=0
+					break
+					;;
+			esac
+		done
+		return "$rc"
+	}
 
 
-function __syz::__remove_list_var {
-	local sep="$1" ; shift
-	local var="$1" ; shift
-	local i
-	for i; do
-		i="$(__syz::__absolutify "$i")"
-		case "${!var}" in
-			*"$sep$i$sep"*) declare -gx "$var"="${!var/$sep$i$sep/$sep}" ;;
-			     "$i$sep"*) declare -gx "$var"="${!var/#$i$sep}" ;;
-			*"$sep$i")      declare -gx "$var"="${!var/%$sep$i}" ;;
-			     "$i")      declare -gx "$var"="" ;;
-			*)  ;;  # Not present
-		esac
-	done
-}
+	function __syz::__resolve_loadable_dir {
+		# FIXME: if no trailing "/<version>", then figure out and use the default version
+		local target="$1" ; shift
+		local ${1+-n} output_pv="$1" ; shift   # "pv" == "<pkgname>/<version>"
+		local ${1+-n} output_dir="$1" ; shift
+		local basedir
+		local rc=1
+		local -a _syz_path
+		__syz::__parse_list _syz_path "$SYZ_PATH"
+		if [ "$SYZ_PATH" ]; then
+			__syz::__set_nullglob
+			for basedir in "${_syz_path[@]}"; do
+				if __syz::__is_loadable_dir "$basedir/$target"; then
+					output_pv="$target"
+					output_dir="$basedir/$target"
+					rc=0
+					break
+				fi
+			done
+			__syz::__restore_nullglob
+		fi
+		return "$rc"
+	}
+
+
+	declare -a __syz_nullglob_stack
+
+	function __syz::__set_nullglob {
+		__syz_nullglob_stack+=("$(shopt -p nullglob || true)")
+		shopt -s nullglob
+	}
+
+
+	function __syz::__restore_nullglob {
+		eval "${__syz_nullglob_stack[${#__syz_nullglob_stack[@]}-1]}"
+		unset __syz_nullglob_stack[${#__syz_nullglob_stack[@]}-1]
+	}
+
+
+	function __syz::__fancy_output {
+		# FIXME: allow the user to override
+		# Fancy output for terminals, plain otherwise
+		tty -s 0<&1
+	}
+
+	function __syz::__columnate {
+		local header="$1" ; shift
+		local emptymsg="$1" ; shift
+		local output="$(cat "$@")"
+		if __syz::__fancy_output; then
+			if [ "$output" ]; then
+				if [ "$header" ]; then
+					echo
+					echo "$header"
+					echo "${header//?/-}-"
+					echo
+				fi
+				local numlines=0
+				local dummy
+				while read dummy; do
+					numlines=$(($numlines + 1))
+				done <<< "$output"
+				awk -v numlines="$numlines" 'NF > 0 { printf("%"length(numlines)"s) %s\n", NR, $0); }' <<< "$output" | column
+				if [ "$header" ]; then
+					echo
+				fi
+			else
+				if [ "$emptymsg" ]; then
+					echo "$emptymsg"
+					echo
+				fi
+			fi
+		else
+			if [ "$output" ]; then
+				echo "$output"
+			fi
+		fi
+	}
+
+
+	function __syz::__is_loadable_dir {
+		# check for a valid subdir or .syzrc
+		# FIXME: .syzrc in the parent dir is also acceptable
+		if [ -r "$1/.syzrc" ]; then
+			return 0
+		fi
+		local i
+		for i in "${__syz_subdirs[@]}"; do
+			if [ -d "$1/$i" ]; then
+				return 0
+			fi
+		done
+		return 1
+	}
+
+
+	function __syz::__parse_list {
+		local delim=:
+		if [ x"$1" = x"-d" ]; then
+			delim="$2"
+			shift 2
+		fi
+		local -n output="$1" ; shift
+		local old_IFS="$IFS"
+		IFS="$delim"
+		output=()
+		local i
+		for i in $1; do
+			output+=("$i")
+		done
+		local rc="$?"
+		IFS="$old_IFS"
+		return "$rc"
+	}
+
+
+	function __syz::__stringify_array {
+		local delim=:
+		if [ x"$1" = x"-d" ]; then
+			delim="$2"
+			shift 2
+		fi
+		local -n output="$1" ; shift
+		local -n array="$1" ; shift
+		local old_IFS="$IFS"
+		IFS="$delim"
+		output="${array[*]}"
+		local rc="$?"
+		IFS="$old_IFS"
+		return "$rc"
+	}
+
+
+	function __syz::__absolutify {
+		# FIXME: fix this to return via a local -n variable (to avoid forking)
+		if [ "$__syz_basedir" ]; then
+			case "$1" in
+				/*)
+					echo "$1"
+					;;
+				*)
+					echo "$__syz_basedir/$1"
+					;;
+			esac
+		else
+			echo "$1"
+		fi
+	}
+
+
+	function __syz::__adjust_list_var {
+		local type="$1" ; shift
+		local sep="$1" ; shift
+		local var="$1" ; shift
+		local i
+		for i; do
+			i="$(__syz::__absolutify "$i")"
+			case "${!var}" in
+				*"$sep$i$sep"*)  ;;  # Already present
+					 "$i$sep"*)  ;;  # Already present
+				*"$sep$i")       ;;  # Already present
+					 "$i")       ;;  # Already present
+				*)
+					case "$type" in
+						prepend) declare -gx "$var"="$i${!var:+$sep}${!var}" ;;
+						append)  declare -gx "$var"="${!var}${!var:+$sep}$i" ;;
+					esac
+					;;
+			esac
+		done
+	}
+
+
+	function __syz::__remove_list_var {
+		local sep="$1" ; shift
+		local var="$1" ; shift
+		local i
+		for i; do
+			i="$(__syz::__absolutify "$i")"
+			case "${!var}" in
+				*"$sep$i$sep"*) declare -gx "$var"="${!var/$sep$i$sep/$sep}" ;;
+					 "$i$sep"*) declare -gx "$var"="${!var/#$i$sep}" ;;
+				*"$sep$i")      declare -gx "$var"="${!var/%$sep$i}" ;;
+					 "$i")      declare -gx "$var"="" ;;
+				*)  ;;  # Not present
+			esac
+		done
+	}
 
 }
 
