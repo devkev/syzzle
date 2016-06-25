@@ -67,6 +67,8 @@ function syz::empty {
 }
 
 
+# FIXME: move this crap down into internal functions (somehow)
+
 declare -ag __syz_subcommands=()
 declare -Ag __syz_subcommands_options=()
 declare -Ag __syz_subcommands_desc=()
@@ -99,6 +101,7 @@ function syz::help {
 	echo
 	echo "Subcommands:"
 	local name
+	# FIXME: word-wrap at ${COLUMNS:-80}
 	for name in "${__syz_subcommands[@]}"; do
 		if [ "$name" = _ ]; then
 			echo
@@ -409,9 +412,19 @@ function append-path {
 
 
 function bin-dir {
-	#prepend-path PATH "$@"
-	#FIXME: deal better with $mode
-	__syz::__process_dir "$mode" bin "$@"
+	case "$__syz_mode" in
+		load)
+			prepend-path PATH "$@"
+			;;
+		unload)
+			remove-path PATH "$@"
+			;;
+		show)
+			# FIXME: each thing in "$@" should be properly quoted.
+			# probably use declare -p ?
+			echo "$0" "$@"
+			;;
+	esac
 }
 
 function remove-path {
@@ -443,41 +456,34 @@ function __syz::__rerun_if_updated {
 }
 
 
+function __syz::__set_mode {
+	declare -g __syz_mode="$1"
+}
+
+
+function __syz::__unset_mode {
+	unset __syz_mode
+}
+
+
 function __syz::__process_dir {
 	local mode="$1" ; shift
-	local type="$1" ; shift
-	case "$mode" in
-		load)
-			case "$type" in
-				bin)
-					prepend-path PATH "$@"
-					;;
-				lib)
-					;;
-				share/man|man)
-					;;
-				share/pkgconfig)
-					;;
-				sw)
-					;;
-			esac
+	local dir="$1" ; shift
+	__syz::__set_mode "$mode"
+	case "$dir" in
+		bin)
+			bin-dir "$@"
 			;;
-		unload)
-			case "$type" in
-				bin)
-					remove-path PATH "$@"
-					;;
-				lib)
-					;;
-				share/man|man)
-					;;
-				share/pkgconfig)
-					;;
-				sw)
-					;;
-			esac
+		lib)
+			;;
+		share/man|man)
+			;;
+		share/pkgconfig)
+			;;
+		sw)
 			;;
 	esac
+	__syz::__unset_mode
 }
 
 
