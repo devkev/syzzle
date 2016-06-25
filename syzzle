@@ -188,6 +188,76 @@ function syz::inactive {
 }
 
 
+__syz::__add_subcommand_help "avail" "" "List modules available for loading"
+
+function syz::avail {
+	# FIXME: accept an arg which is a prefix-match to limit things to (defaults to "")
+	# FIXME: accept multiple args
+	local basedir
+	local -a _modules=()
+	local -a _syz_path
+	__syz::__parse_list _syz_path "$SYZ_PATH"
+	if [ "$SYZ_PATH" ]; then
+		__syz::__set_nullglob
+		for basedir in "${_syz_path[@]}"; do
+			local pkgdir
+			for pkgdir in "$basedir"/*; do
+				local pkgname="${pkgdir#$basedir/}"
+
+				# check for current and default
+				local current=""
+				if [ -L "$pkgdir/current" ]; then
+					local currentdir="$(readlink -f "$pkgdir/current")"
+					if [ -d "$currentdir" ]; then
+						current="$(readlink "$pkgdir/current")"
+					fi
+				fi
+
+				local default=""
+				if [ -L "$pkgdir/default" ]; then
+					local defaultdir="$(readlink -f "$pkgdir/default")"
+					if [ -d "$defaultdir" ]; then
+						default="$(readlink "$pkgdir/default")"
+					fi
+				fi
+
+				local versiondir
+				for versiondir in "$pkgdir"/*; do
+					local version="${versiondir#$pkgdir/}"
+
+					if __syz::__fancy_output; then
+						if [ "$version" = current -a "$current" ]; then
+							: # ignore
+						elif [ "$version" = default -a "$default" ]; then
+							: # ignore
+						elif __syz::__is_loadable_dir "$versiondir"; then
+							local suffix=""
+							if [ "$current" = "$version" ]; then
+								suffix+=" (current)"
+							elif [ "$default" = "$version" ]; then
+								suffix+=" (default)"
+							fi
+							_modules+=("$pkgname/$version$suffix")
+						else
+							# not loadable
+							: # ignore
+						fi
+					else
+						if __syz::__is_loadable_dir "$versiondir"; then
+							_modules+=("$pkgname/$version")
+						fi
+					fi
+				done
+			done
+		done
+		__syz::__restore_nullglob
+	fi
+	local _str
+	__syz::__stringify_array -d "$__syz_nl" _str _modules
+	__syz::__columnate "Available modules" "No modules available." <<< "$_str"
+}
+
+
 __syz::__add_subcommand_help_break
 
 
@@ -311,76 +381,6 @@ function syz::install {
 	# FIXME: download binaries and put into place
 	# FIXME: possibly compile
 	:
-}
-
-
-__syz::__add_subcommand_help "avail" "" "List modules available for loading"
-
-function syz::avail {
-	# FIXME: accept an arg which is a prefix-match to limit things to (defaults to "")
-	# FIXME: accept multiple args
-	local basedir
-	local -a _modules=()
-	local -a _syz_path
-	__syz::__parse_list _syz_path "$SYZ_PATH"
-	if [ "$SYZ_PATH" ]; then
-		__syz::__set_nullglob
-		for basedir in "${_syz_path[@]}"; do
-			local pkgdir
-			for pkgdir in "$basedir"/*; do
-				local pkgname="${pkgdir#$basedir/}"
-
-				# check for current and default
-				local current=""
-				if [ -L "$pkgdir/current" ]; then
-					local currentdir="$(readlink -f "$pkgdir/current")"
-					if [ -d "$currentdir" ]; then
-						current="$(readlink "$pkgdir/current")"
-					fi
-				fi
-
-				local default=""
-				if [ -L "$pkgdir/default" ]; then
-					local defaultdir="$(readlink -f "$pkgdir/default")"
-					if [ -d "$defaultdir" ]; then
-						default="$(readlink "$pkgdir/default")"
-					fi
-				fi
-
-				local versiondir
-				for versiondir in "$pkgdir"/*; do
-					local version="${versiondir#$pkgdir/}"
-
-					if __syz::__fancy_output; then
-						if [ "$version" = current -a "$current" ]; then
-							: # ignore
-						elif [ "$version" = default -a "$default" ]; then
-							: # ignore
-						elif __syz::__is_loadable_dir "$versiondir"; then
-							local suffix=""
-							if [ "$current" = "$version" ]; then
-								suffix+=" (current)"
-							elif [ "$default" = "$version" ]; then
-								suffix+=" (default)"
-							fi
-							_modules+=("$pkgname/$version$suffix")
-						else
-							# not loadable
-							: # ignore
-						fi
-					else
-						if __syz::__is_loadable_dir "$versiondir"; then
-							_modules+=("$pkgname/$version")
-						fi
-					fi
-				done
-			done
-		done
-		__syz::__restore_nullglob
-	fi
-	local _str
-	__syz::__stringify_array -d "$__syz_nl" _str _modules
-	__syz::__columnate "Available modules" "No modules available." <<< "$_str"
 }
 
 
