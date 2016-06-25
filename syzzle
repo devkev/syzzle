@@ -136,9 +136,9 @@ function syz::version {
 }
 
 
-__syz::__add_subcommand_help "reload" "" "Reload syz itself"
+__syz::__add_subcommand_help "restart" "" "Restart syz itself"
 
-function syz::reload {
+function syz::restart {
 	# FIXME: ideally clean up and remove all the private functions also
 	local src="$SYZ_SOURCE"
 	unset SYZ_SOURCE
@@ -430,7 +430,7 @@ function __syz::__rerun_if_updated {
 	if [ "$SYZ_SOURCED_AT" -a "$modtime" -a "$modtime" -gt "$SYZ_SOURCED_AT" ]; then
 		echo "syz: updated, auto-reloading..." 1>&2
 		echo 1>&2
-		syz::reload
+		syz::restart
 		# FIXME: the re-call of self should be done by the caller, who can simply do "$0" "$@"
 		syz "$@"
 		return 0
