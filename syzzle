@@ -446,9 +446,13 @@ function bin-dir {
 			remove-path PATH "$@"
 			;;
 		show)
-			# FIXME: each thing in "$@" should be properly quoted.
-			# probably use declare -p ?
-			echo "$0" "$@"
+			local i
+			local s
+			for i; do
+				local this="$(declare -p i)"
+				s="$s ${this#declare -- i=}"
+			done
+			echo "${FUNCNAME[0]}$s"
 			;;
 	esac
 }
