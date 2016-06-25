@@ -291,7 +291,7 @@ function syz::load {
 			local subdir
 			for subdir in "${__syz_subdirs[@]}"; do
 				if [ -d "$_resolved_dir/$subdir" ]; then
-					__syz::__process_dir "$subdir" "$_resolved_dir/$subdir"
+					__syz::__process_dir "$subdir"
 				fi
 			done
 			# remember that this is loaded
@@ -338,7 +338,7 @@ function syz::unload {
 			local subdir
 			for subdir in "${__syz_subdirs[@]}"; do
 				# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
-				__syz::__process_dir "$subdir" "$_resolved_dir/$subdir"
+				__syz::__process_dir "$subdir"
 			done
 			# forget that this was loaded
 			remove-path SYZ_MODULES "$_resolved_pv"
@@ -381,7 +381,7 @@ function syz::show {
 			local subdir
 			for subdir in "${__syz_subdirs[@]}"; do
 				if [ -d "$_resolved_dir/$subdir" ]; then
-					__syz::__process_dir "$subdir" "$_resolved_dir/$subdir"
+					__syz::__process_dir "$subdir"
 				fi
 			done
 			__syz::__unset_mode
@@ -510,7 +510,7 @@ function __syz::__process_dir {
 	local subdir="$1" ; shift
 	case "$subdir" in
 		bin)
-			bin-dir "$@"
+			bin-dir "$subdir"
 			;;
 		lib)
 			;;
