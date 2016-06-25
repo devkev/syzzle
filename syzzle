@@ -688,7 +688,19 @@ function __syz::__stringify_array {
 
 
 function __syz::__absolutify {
-	echo "$1"
+	# FIXME: fix this to return via a local -n variable (to avoid forking)
+	if [ "$__syz_basedir" ]; then
+		case "$1" in
+			/*)
+				echo "$1"
+				;;
+			*)
+				echo "$__syz_basedir/$1"
+				;;
+		esac
+	else
+		echo "$1"
+	fi
 }
 
 
