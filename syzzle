@@ -84,8 +84,7 @@ function __syz::__add_subcommand_help {
 }
 
 function __syz::__add_subcommand_help_break {
-	# This is a bit of a cheat, but it works to get a blank line
-	__syz::__add_subcommand_help "" "" ""
+	__syz::__add_subcommand_help "_" "" ""
 }
 
 
@@ -101,9 +100,13 @@ function syz::help {
 	echo "Subcommands:"
 	local name
 	for name in "${__syz_subcommands[@]}"; do
-		local options="${__syz_subcommands_options[$name]}"
-		local desc="${__syz_subcommands_desc[$name]}"
-		echo -e "$name${options+ }$options\t$desc"
+		if [ "$name" = _ ]; then
+			echo
+		else
+			local options="${__syz_subcommands_options[$name]}"
+			local desc="${__syz_subcommands_desc[$name]}"
+			echo -e "$name${options+ }$options\t$desc"
+		fi
 	done | awk -F"$(echo -ne '\t')" '
 		{
 			first[NR] = $1;
