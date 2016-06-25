@@ -20,6 +20,9 @@ SYZ_VERSION=0.0.2
 ##
 ##################################################
 
+function __syz::__define_external_functions {
+
+unset -f __syz::__define_external_functions
 
 function syz {
 	if ! __syz::__rerun_if_updated "$@"; then
@@ -64,29 +67,6 @@ function syz:: {
 function syz::empty {
 	# FIXME: customisable action
 	syz::status
-}
-
-
-# FIXME: move this crap down into internal functions (somehow)
-
-declare -ag __syz_subcommands=()
-declare -Ag __syz_subcommands_options=()
-declare -Ag __syz_subcommands_desc=()
-
-function __syz::__add_subcommand_help {
-	local name="$1" ; shift
-	local options="$1" ; shift
-	local desc="$*"
-	declare -ag __syz_subcommands
-	declare -Ag __syz_subcommands_options
-	declare -Ag __syz_subcommands_desc
-	__syz_subcommands+=("$name")
-	__syz_subcommands_options[$name]="$options"
-	__syz_subcommands_desc[$name]="$desc"
-}
-
-function __syz::__add_subcommand_help_break {
-	__syz::__add_subcommand_help "_" "" ""
 }
 
 
@@ -423,6 +403,8 @@ function syz::install {
 }
 
 
+}
+
 
 
 ##################################################
@@ -432,6 +414,10 @@ function syz::install {
 ##################################################
 
 # FIXME: these pollute the namespace, and should only be present while syzrc files are being sourced
+
+function __syz::__define_interface_functions {
+
+unset -f __syz::__define_interface_functions
 
 function prepend-path {
 	__syz::__adjust_list_var prepend : "$@"
@@ -461,6 +447,7 @@ function bin-dir {
 	esac
 }
 
+}
 
 
 
@@ -469,6 +456,32 @@ function bin-dir {
 ##  Internal functions
 ##
 ##################################################
+
+
+function __syz::__define_internal_functions {
+
+unset -f __syz::__define_internal_functions
+
+
+declare -ag __syz_subcommands=()
+declare -Ag __syz_subcommands_options=()
+declare -Ag __syz_subcommands_desc=()
+
+function __syz::__add_subcommand_help {
+	local name="$1" ; shift
+	local options="$1" ; shift
+	local desc="$*"
+	declare -ag __syz_subcommands
+	declare -Ag __syz_subcommands_options
+	declare -Ag __syz_subcommands_desc
+	__syz_subcommands+=("$name")
+	__syz_subcommands_options[$name]="$options"
+	__syz_subcommands_desc[$name]="$desc"
+}
+
+function __syz::__add_subcommand_help_break {
+	__syz::__add_subcommand_help "_" "" ""
+}
 
 
 function __syz::__rerun_if_updated {
@@ -743,7 +756,7 @@ function __syz::__remove_list_var {
 	done
 }
 
-
+}
 
 
 ##################################################
@@ -787,6 +800,14 @@ __syz_subdirs+=(man)
 __syz_subdirs+=(share/man)
 __syz_subdirs+=(share/pkgconfig)
 __syz_subdirs+=(sw)
+
+
+
+# Internal functions first
+__syz::__define_internal_functions
+__syz::__define_external_functions
+__syz::__define_interface_functions
+
 
 
 
