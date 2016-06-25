@@ -443,16 +443,6 @@ function append-path {
 }
 
 
-function __syz::__show_function_invocation {
-	local i
-	local s
-	for i; do
-		local this="$(declare -p i)"
-		s="$s ${this#declare -- i=}"
-	done
-	echo "${FUNCNAME[1]}$s"
-}
-
 function remove-path {
 	__syz::__remove_list_var : "$@"
 }
@@ -533,6 +523,16 @@ function __syz::__process_dir {
 	esac
 }
 
+
+function __syz::__show_function_invocation {
+	local i
+	local s
+	for i; do
+		local this="$(declare -p i)"
+		s="$s ${this#declare -- i=}"
+	done
+	echo "${FUNCNAME[1]}$s"
+}
 
 function __syz::__is_loaded {
 	local looking_for="$1" ; shift
