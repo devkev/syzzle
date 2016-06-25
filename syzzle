@@ -447,6 +447,10 @@ function __syz::__show_function_invocation {
 	echo "${FUNCNAME[1]}$s"
 }
 
+function remove-path {
+	__syz::__remove_list_var : "$@"
+}
+
 function bin-dir {
 	case "$__syz_mode" in
 		load)
@@ -459,10 +463,6 @@ function bin-dir {
 			__syz::__show_function_invocation "$@"
 			;;
 	esac
-}
-
-function remove-path {
-	__syz::__remove_list_var : "$@"
 }
 
 
