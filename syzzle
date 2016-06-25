@@ -284,17 +284,19 @@ function syz::load {
 			echo "Loading $_resolved_pv from $_resolved_dir"
 			# actually load it
 			# FIXME: this should be a function
+			__syz::__set_mode load
 			# FIXME: use .syzrc if present
 			# FIXME: use a .syzrc from the parent dir if present
 			local subdir
 			for subdir in "${__syz_subdirs[@]}"; do
 				if [ -d "$_resolved_dir/$subdir" ]; then
-					__syz::__process_dir load "$subdir" "$_resolved_dir/$subdir"
+					__syz::__process_dir "$subdir" "$_resolved_dir/$subdir"
 				fi
 			done
 			# remember that this is loaded
 			append-path SYZ_MODULES "$_resolved_pv"
 			append-path SYZ_MODULES_ABS "$_resolved_dir"
+			__syz::__unset_mode
 		else
 			# FIXME: try to install it?
 			echo "syz: No such module: $i"
@@ -327,16 +329,18 @@ function syz::unload {
 			echo "Unloading $_resolved_pv from $_resolved_dir"
 			# actually unload it
 			# FIXME: this should be a function
+			__syz::__set_mode unload
 			# FIXME: use .syzrc if present
 			# FIXME: use a .syzrc from the parent dir if present
 			local subdir
 			for subdir in "${__syz_subdirs[@]}"; do
 				# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
-				__syz::__process_dir unload "$subdir" "$_resolved_dir/$subdir"
+				__syz::__process_dir "$subdir" "$_resolved_dir/$subdir"
 			done
 			# forget that this was loaded
 			remove-path SYZ_MODULES "$_resolved_pv"
 			remove-path SYZ_MODULES_ABS "$_resolved_dir"
+			__syz::__unset_mode
 		else
 			# YIKES
 			# Module has been loaded, but now fails __syz::__is_loadable_dir.
@@ -467,9 +471,7 @@ function __syz::__unset_mode {
 
 
 function __syz::__process_dir {
-	local mode="$1" ; shift
 	local dir="$1" ; shift
-	__syz::__set_mode "$mode"
 	case "$dir" in
 		bin)
 			bin-dir "$@"
@@ -483,7 +485,6 @@ function __syz::__process_dir {
 		sw)
 			;;
 	esac
-	__syz::__unset_mode
 }
 
 
