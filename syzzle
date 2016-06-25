@@ -352,7 +352,7 @@ function syz::unload {
 }
 
 
-__syz::__add_subcommand_help "show" "module[/version] [...]" "Show the configuration of the specified module(s) (TBI)"
+__syz::__add_subcommand_help "show" "module[/version] [...]" "(Unimplemented) Show the configuration of the specified module(s)"
 
 function syz::show {
 	# FIXME: show the configuration of the module(s)
@@ -375,7 +375,7 @@ function syz::isloaded {
 }
 
 
-__syz::__add_subcommand_help "install" "module[/version] [...]" "Download and install the specified module(s) (TBI)"
+__syz::__add_subcommand_help "install" "module[/version] [...]" "(Unimplemented) Download and install the specified module(s)"
 
 function syz::install {
 	# FIXME: download binaries and put into place
