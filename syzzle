@@ -362,8 +362,30 @@ function syz::unload {
 __syz::__add_subcommand_help "show" "module[/version] [...]" "(Unimplemented) Show the configuration of the specified module(s)"
 
 function syz::show {
-	# FIXME: show the configuration of the module(s)
-	:
+	local rc=0
+	local i
+	local _resolved_pv _resolved_dir
+	for i; do
+		if __syz::__resolve_loadable_dir "$i" _resolved_pv _resolved_dir; then
+			echo "# $_resolved_pv from $_resolved_dir"
+			# actually show it
+			# FIXME: this should be a function
+			__syz::__set_mode show
+			# FIXME: use .syzrc if present
+			# FIXME: use a .syzrc from the parent dir if present
+			local subdir
+			for subdir in "${__syz_subdirs[@]}"; do
+				if [ -d "$_resolved_dir/$subdir" ]; then
+					__syz::__process_dir "$subdir" "$_resolved_dir/$subdir"
+				fi
+			done
+			__syz::__unset_mode
+		else
+			echo "syz: No such module: $i"
+			rc=1
+		fi
+	done
+	return "$rc"
 }
 
 
