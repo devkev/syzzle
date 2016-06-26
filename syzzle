@@ -441,7 +441,6 @@ function __syz::__define_interface_functions {
 				;;
 			*)
 				local i
-				# FIXME: Make this junk be a function (somehow - local -an isn't possible)
 				local -a args
 				for i; do
 					args+=("$(__syz::__absolutify "$i")")
