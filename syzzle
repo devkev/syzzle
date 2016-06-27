@@ -462,10 +462,14 @@ function __syz::__define_interface_functions {
 	}
 
 	local i
-	for i in bin; do
-		eval function $i-dir '{
-			__syz::__do_real_dir "$@"
-		}'
+	for i in $(compgen -A function __syz::__real_); do
+		case "$i" in
+			*-dir)
+				eval function ${i#__syz::__real_} '{
+					__syz::__do_real_dir "$@"
+				}'
+				;;
+		esac
 	done
 
 }
