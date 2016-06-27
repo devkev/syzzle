@@ -450,13 +450,6 @@ function __syz::__define_interface_functions {
 		esac
 	}
 
-	local i
-	for i in bin; do
-		eval function $i-dir '{
-			__syz::__do_real_dir "$@"
-		}'
-	done
-
 	function __syz::__real_bin-dir {
 		case "$__syz_mode" in
 			load)
@@ -467,6 +460,13 @@ function __syz::__define_interface_functions {
 				;;
 		esac
 	}
+
+	local i
+	for i in bin; do
+		eval function $i-dir '{
+			__syz::__do_real_dir "$@"
+		}'
+	done
 
 }
 
