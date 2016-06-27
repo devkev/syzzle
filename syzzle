@@ -434,33 +434,6 @@ function __syz::__define_interface_functions {
 	}
 
 
-	function __syz::__do_real_dir {
-		case "$__syz_mode" in
-			show)
-				__syz::__show_function_invocation "$@"
-				;;
-			*)
-				local i
-				local -a args
-				for i; do
-					args+=("$(__syz::__absolutify "$i")")
-				done
-				__syz::__real_"${FUNCNAME[1]}" "${args[@]}"
-				;;
-		esac
-	}
-
-	function __syz::__real_bin-dir {
-		case "$__syz_mode" in
-			load)
-				prepend-path PATH "$@"
-				;;
-			unload)
-				remove-path PATH "$@"
-				;;
-		esac
-	}
-
 	local i
 	for i in $(compgen -A function __syz::__real_); do
 		case "$i" in
@@ -486,6 +459,35 @@ function __syz::__define_interface_functions {
 function __syz::__define_internal_functions {
 
 	unset -f __syz::__define_internal_functions
+
+
+	function __syz::__real_bin-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path PATH "$@"
+				;;
+			unload)
+				remove-path PATH "$@"
+				;;
+		esac
+	}
+
+
+	function __syz::__do_real_dir {
+		case "$__syz_mode" in
+			show)
+				__syz::__show_function_invocation "$@"
+				;;
+			*)
+				local i
+				local -a args
+				for i; do
+					args+=("$(__syz::__absolutify "$i")")
+				done
+				__syz::__real_"${FUNCNAME[1]}" "${args[@]}"
+				;;
+		esac
+	}
 
 
 	declare -ag __syz_subcommands=()
