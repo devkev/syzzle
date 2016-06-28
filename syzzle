@@ -509,6 +509,22 @@ function __syz::__define_internal_functions {
 	}
 
 
+	function __syz::__real_lib-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path LIBRARY_PATH "$@"
+				prepend-path LD_LIBRARY_PATH "$@"
+				prepend-path LD_RUN_PATH "$@"
+				;;
+			unload)
+				remove-path LIBRARY_PATH "$@"
+				remove-path LD_LIBRARY_PATH "$@"
+				remove-path LD_RUN_PATH "$@"
+				;;
+		esac
+	}
+
+
 	function __syz::__do_real_dir {
 		case "$__syz_mode" in
 			show)
