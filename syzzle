@@ -497,6 +497,18 @@ function __syz::__define_internal_functions {
 	}
 
 
+	function __syz::__real_pkgconfig-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path PKG_CONFIG_PATH "$@"
+				;;
+			unload)
+				remove-path PKG_CONFIG_PATH "$@"
+				;;
+		esac
+	}
+
+
 	function __syz::__do_real_dir {
 		case "$__syz_mode" in
 			show)
