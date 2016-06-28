@@ -485,6 +485,18 @@ function __syz::__define_internal_functions {
 	}
 
 
+	function __syz::__real_info-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path INFOPATH "$@"
+				;;
+			unload)
+				remove-path INFOPATH "$@"
+				;;
+		esac
+	}
+
+
 	function __syz::__do_real_dir {
 		case "$__syz_mode" in
 			show)
