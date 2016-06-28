@@ -473,6 +473,18 @@ function __syz::__define_internal_functions {
 	}
 
 
+	function __syz::__real_man-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path MANPATH "$@"
+				;;
+			unload)
+				remove-path MANPATH "$@"
+				;;
+		esac
+	}
+
+
 	function __syz::__do_real_dir {
 		case "$__syz_mode" in
 			show)
