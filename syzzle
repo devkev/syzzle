@@ -705,6 +705,7 @@ function __syz::__define_internal_functions {
 				bin-dir "$subdir"
 				;;
 			lib)
+				lib-dir "$subdir"
 				;;
 			share/man|man)
 				;;
