@@ -480,6 +480,10 @@ function __syz::__define_internal_functions {
 		__syz::__prepend_or_remove_list_var : PKG_CONFIG_PATH "$@"
 	}
 
+	function __syz::__real::pkg-config-dir {
+		__syz::__real::pkgconfig-dir "$@"
+	}
+
 
 	function __syz::__real::lib-dir {
 		__syz::__prepend_or_remove_list_var : LIBRARY_PATH "$@"
