@@ -516,22 +516,22 @@ function __syz::__define_internal_functions {
 	}
 
 
-	function __syz::__real::python-include-dir {
+	function __syz::__real::python-package-dir {
 		__syz::__prepend_or_remove_list_var : PYTHONPATH "$@"
 	}
 
 
-	function __syz::__real::perl-include-dir {
+	function __syz::__real::perl-module-dir {
 		__syz::__prepend_or_remove_list_var : PERLLIB "$@"
 	}
 
 
-	function __syz::__real::perl5-include-dir {
+	function __syz::__real::perl5-module-dir {
 		__syz::__prepend_or_remove_list_var : PERL5LIB "$@"
 	}
 
 
-	function __syz::__real::tcl-include-dir {
+	function __syz::__real::tcl-lib-dir {
 		__syz::__prepend_or_remove_list_var ' ' TCLLIBPATH "$@"
 	}
 
