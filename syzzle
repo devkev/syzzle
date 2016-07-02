@@ -430,7 +430,7 @@ function __syz::__define_interface_functions {
 
 
 	function remove-path {
-		__syz::__remove_list_var : "$@"
+		__syz::__adjust_list_var remove : "$@"
 	}
 
 
@@ -619,7 +619,7 @@ function __syz::__define_internal_functions {
 				__syz::__adjust_list_var prepend ' ' TCLLIBPATH "$@"
 				;;
 			unload)
-				__syz::__remove_list_var ' ' TCLLIBPATH "$@"
+				__syz::__adjust_list_var remove ' ' TCLLIBPATH "$@"
 				;;
 		esac
 	}
@@ -897,7 +897,33 @@ function __syz::__define_internal_functions {
 
 
 	function __syz::__adjust_list_var {
+		case "$1" in
+			prepend|append)
+				__syz::__add_list_var "$@"
+				;;
+			remove)
+				__syz::__remove_list_var "$@"
+				;;
+			*)
+				# ???
+				echo "syz: Internal error: ${BASH_SOURCE[0]}:$BASH_LINENO in ${FUNCNAME[0]} unknown type \"$1\", should be prepend, append or remove" 1>&2
+				exit 3
+				;;
+		esac
+	}
+
+
+	function __syz::__add_list_var {
 		local type="$1" ; shift
+		case "$type" in
+			prepend) ;;
+			append) ;;
+			*)
+				# FIXME: it would be nice to be able to have a proper "assertion" thing
+				echo "syz: Internal error: ${BASH_SOURCE[0]}:$BASH_LINENO in ${FUNCNAME[0]} unknown type \"$type\", must be prepend or append" 1>&2
+				exit 3
+				;;
+		esac
 		local sep="$1" ; shift
 		local var="$1" ; shift
 		local i
@@ -919,6 +945,15 @@ function __syz::__define_internal_functions {
 
 
 	function __syz::__remove_list_var {
+		local type="$1" ; shift
+		case "$type" in
+			remove) ;;
+			*)
+				# FIXME: it would be nice to be able to have a proper "assertion" thing
+				echo "syz: Internal error: ${BASH_SOURCE[0]}:$BASH_LINENO in ${FUNCNAME[0]} unknown type \"$type\", must be remove" 1>&2
+				exit 3
+				;;
+		esac
 		local sep="$1" ; shift
 		local var="$1" ; shift
 		local i
