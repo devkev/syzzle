@@ -464,10 +464,10 @@ function __syz::__define_internal_functions {
 	function __syz::__real_bin-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path PATH "$@"
+				__syz::__adjust_list_var prepend : PATH "$@"
 				;;
 			unload)
-				remove-path PATH "$@"
+				__syz::__adjust_list_var remove : PATH "$@"
 				;;
 		esac
 	}
@@ -476,10 +476,10 @@ function __syz::__define_internal_functions {
 	function __syz::__real_man-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path MANPATH "$@"
+				__syz::__adjust_list_var prepend : MANPATH "$@"
 				;;
 			unload)
-				remove-path MANPATH "$@"
+				__syz::__adjust_list_var remove : MANPATH "$@"
 				;;
 		esac
 	}
@@ -488,10 +488,10 @@ function __syz::__define_internal_functions {
 	function __syz::__real_info-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path INFOPATH "$@"
+				__syz::__adjust_list_var prepend : INFOPATH "$@"
 				;;
 			unload)
-				remove-path INFOPATH "$@"
+				__syz::__adjust_list_var remove : INFOPATH "$@"
 				;;
 		esac
 	}
@@ -500,10 +500,10 @@ function __syz::__define_internal_functions {
 	function __syz::__real_pkgconfig-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path PKG_CONFIG_PATH "$@"
+				__syz::__adjust_list_var prepend : PKG_CONFIG_PATH "$@"
 				;;
 			unload)
-				remove-path PKG_CONFIG_PATH "$@"
+				__syz::__adjust_list_var remove : PKG_CONFIG_PATH "$@"
 				;;
 		esac
 	}
@@ -512,14 +512,14 @@ function __syz::__define_internal_functions {
 	function __syz::__real_lib-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path LIBRARY_PATH "$@"
-				prepend-path LD_LIBRARY_PATH "$@"
-				prepend-path LD_RUN_PATH "$@"
+				__syz::__adjust_list_var prepend : LIBRARY_PATH "$@"
+				__syz::__adjust_list_var prepend : LD_LIBRARY_PATH "$@"
+				__syz::__adjust_list_var prepend : LD_RUN_PATH "$@"
 				;;
 			unload)
-				remove-path LIBRARY_PATH "$@"
-				remove-path LD_LIBRARY_PATH "$@"
-				remove-path LD_RUN_PATH "$@"
+				__syz::__adjust_list_var remove : LIBRARY_PATH "$@"
+				__syz::__adjust_list_var remove : LD_LIBRARY_PATH "$@"
+				__syz::__adjust_list_var remove : LD_RUN_PATH "$@"
 				;;
 		esac
 	}
@@ -528,10 +528,10 @@ function __syz::__define_internal_functions {
 	function __syz::__real_c-include-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path C_INCLUDE_PATH "$@"
+				__syz::__adjust_list_var prepend : C_INCLUDE_PATH "$@"
 				;;
 			unload)
-				remove-path C_INCLUDE_PATH "$@"
+				__syz::__adjust_list_var remove : C_INCLUDE_PATH "$@"
 				;;
 		esac
 	}
@@ -540,10 +540,10 @@ function __syz::__define_internal_functions {
 	function __syz::__real_c++-include-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path CPLUS_INCLUDE_PATH "$@"
+				__syz::__adjust_list_var prepend : CPLUS_INCLUDE_PATH "$@"
 				;;
 			unload)
-				remove-path CPLUS_INCLUDE_PATH "$@"
+				__syz::__adjust_list_var remove : CPLUS_INCLUDE_PATH "$@"
 				;;
 		esac
 	}
@@ -556,10 +556,10 @@ function __syz::__define_internal_functions {
 	function __syz::__real_cpp-include-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path CPATH "$@"
+				__syz::__adjust_list_var prepend : CPATH "$@"
 				;;
 			unload)
-				remove-path CPATH "$@"
+				__syz::__adjust_list_var remove : CPATH "$@"
 				;;
 		esac
 	}
@@ -568,10 +568,10 @@ function __syz::__define_internal_functions {
 	function __syz::__real_fortran-include-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path FPATH "$@"
+				__syz::__adjust_list_var prepend : FPATH "$@"
 				;;
 			unload)
-				remove-path FPATH "$@"
+				__syz::__adjust_list_var remove : FPATH "$@"
 				;;
 		esac
 	}
@@ -580,10 +580,10 @@ function __syz::__define_internal_functions {
 	function __syz::__real_python-include-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path PYTHONPATH "$@"
+				__syz::__adjust_list_var prepend : PYTHONPATH "$@"
 				;;
 			unload)
-				remove-path PYTHONPATH "$@"
+				__syz::__adjust_list_var remove : PYTHONPATH "$@"
 				;;
 		esac
 	}
@@ -592,10 +592,10 @@ function __syz::__define_internal_functions {
 	function __syz::__real_perl-include-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path PERLLIB "$@"
+				__syz::__adjust_list_var prepend : PERLLIB "$@"
 				;;
 			unload)
-				remove-path PERLLIB "$@"
+				__syz::__adjust_list_var remove : PERLLIB "$@"
 				;;
 		esac
 	}
@@ -604,10 +604,10 @@ function __syz::__define_internal_functions {
 	function __syz::__real_perl5-include-dir {
 		case "$__syz_mode" in
 			load)
-				prepend-path PERL5LIB "$@"
+				__syz::__adjust_list_var prepend : PERL5LIB "$@"
 				;;
 			unload)
-				remove-path PERL5LIB "$@"
+				__syz::__adjust_list_var remove : PERL5LIB "$@"
 				;;
 		esac
 	}
