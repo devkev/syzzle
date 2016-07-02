@@ -419,22 +419,15 @@ function __syz::__define_interface_functions {
 
 	unset -f __syz::__define_interface_functions
 
-	function prepend-path {
-		__syz::__adjust_list_var prepend : "$@"
-	}
-
-
-	function append-path {
-		__syz::__adjust_list_var append : "$@"
-	}
-
-
-	function remove-path {
-		__syz::__adjust_list_var remove : "$@"
-	}
-
 
 	local i
+
+	for i in prepend append remove; do
+		eval function "$i"-path '{
+			__syz::__adjust_list_var '"$i"' : "$@"
+		}'
+	done
+
 	for i in $(compgen -A function __syz::__real::); do
 		case "$i" in
 			*-dir)
