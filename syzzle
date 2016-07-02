@@ -525,6 +525,106 @@ function __syz::__define_internal_functions {
 	}
 
 
+	function __syz::__real_c-include-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path C_INCLUDE_PATH "$@"
+				;;
+			unload)
+				remove-path C_INCLUDE_PATH "$@"
+				;;
+		esac
+	}
+
+
+	function __syz::__real_c++-include-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path CPLUS_INCLUDE_PATH "$@"
+				;;
+			unload)
+				remove-path CPLUS_INCLUDE_PATH "$@"
+				;;
+		esac
+	}
+
+	function __syz::__real_cxx-include-dir {
+		__syz::__real_c++-include-dir "$@"
+	}
+
+
+	function __syz::__real_cpp-include-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path CPATH "$@"
+				;;
+			unload)
+				remove-path CPATH "$@"
+				;;
+		esac
+	}
+
+
+	function __syz::__real_fortran-include-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path FPATH "$@"
+				;;
+			unload)
+				remove-path FPATH "$@"
+				;;
+		esac
+	}
+
+
+	function __syz::__real_python-include-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path PYTHONPATH "$@"
+				;;
+			unload)
+				remove-path PYTHONPATH "$@"
+				;;
+		esac
+	}
+
+
+	function __syz::__real_perl-include-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path PERLLIB "$@"
+				;;
+			unload)
+				remove-path PERLLIB "$@"
+				;;
+		esac
+	}
+
+
+	function __syz::__real_perl5-include-dir {
+		case "$__syz_mode" in
+			load)
+				prepend-path PERL5LIB "$@"
+				;;
+			unload)
+				remove-path PERL5LIB "$@"
+				;;
+		esac
+	}
+
+
+	function __syz::__real_tcl-include-dir {
+		case "$__syz_mode" in
+			load)
+				__syz::__adjust_list_var prepend ' ' TCLLIBPATH "$@"
+				;;
+			unload)
+				__syz::__remove_list_var ' ' TCLLIBPATH "$@"
+				;;
+		esac
+	}
+
+
 	function __syz::__do_real_dir {
 		case "$__syz_mode" in
 			show)
