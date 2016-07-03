@@ -17,7 +17,6 @@ for i; do
 			verbose=y
 			;;
 		-q)
-			echo "Running tests..."
 			quiet=y
 			;;
 	esac
@@ -27,7 +26,7 @@ unset i
 # Setup
 
 basedir=""
-trap '__syz_rc="$?" ; set +ex ; blankline ; if [ $__syz_rc = 0 ]; then echo "ALL TESTS PASSED"; else echo "TEST FAILED ($__syz_rc)"; fi ; [ "$basedir" ] && rm -rf "$basedir" ; exit $__syz_rc' EXIT
+trap '__syz_rc="$?" ; set +ex ; echo ; if [ $__syz_rc = 0 ]; then echo "ALL TESTS PASSED"; else echo "TEST FAILED ($__syz_rc)"; fi ; [ "$basedir" ] && rm -rf "$basedir" ; exit $__syz_rc' EXIT
 basedir="${SYZZLE_TEST_BASEDIR:-$(mktemp -d)}"
 if [ ! -e "$basedir" ]; then
 	mkdir -p "$basedir"
@@ -56,13 +55,40 @@ function unindent {
 }
 
 if [ "$quiet" = y ]; then
+
+	# This function based on https://github.com/fearside/ProgressBar/blob/master/progressbar.sh
+	function _progress_bar {
+		local msg="$1" ; shift
+		local sofar="$1" ; shift
+		local total="$1" ; shift
+
+		local -i progress=($sofar*100/$total*100)/100
+		local -i done=(${progress}*4)/10
+		local -i left=40-$done
+
+		# Build progressbar string lengths
+		local donestr=$(printf "%${done}s")
+		local leftstr=$(printf "%${left}s")
+
+		# eg: Progress : [########################################] 100%
+		echo -ne "\r$msg: [${donestr// /#}${leftstr// /-}] ${progress}%"
+	}
+
+	tests_start="$(awk '$0 == "msg prelim" { print NR; exit }' "$0")"
+	total_lines="$(( $(wc -l "$0" | awk '{print$1}') - $tests_start ))"
+
 	function blankline {
-		:
+		local current_line="$(( ${BASH_LINENO[$((${#BASH_LINENO[@]}-2))]} - $tests_start ))"
+		#echo "$current_line/$total_lines"
+		_progress_bar "Running tests" $current_line $total_lines
 	}
 
 	function msg {
 		:
 	}
+
+	_progress_bar "Running tests" 0 $total_lines
+
 else
 	function blankline {
 		echo
@@ -304,7 +330,7 @@ function check_no_leaked_aliases {
 	fi
 }
 
-msg "prelim"
+msg prelim
 check envvar_pattern "SYZ_PATH" '^'"$basedir"'/sw$'
 check envvar_unset SYZ_{MODULES,MODULES_ABS,INACTIVE_MODULES}
 
@@ -706,8 +732,5 @@ check modules_not_loaded 'abc/0.9'
 check no_modules_loaded
 check no_modules_inactive
 
-
-
-
-
-
+# fin
+blankline
