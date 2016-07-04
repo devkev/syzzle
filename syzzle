@@ -612,7 +612,7 @@ function __syz::__define_internal_functions {
 		# FIXME: extglob for better patterns
 		# FIXME: assoc arrays for the patterns and their targets
 		case "$subdir" in
-			bin)
+			bin|sbin)
 				bin-dir "$subdir"
 				;;
 			share/man|man)
