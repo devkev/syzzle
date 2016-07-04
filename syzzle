@@ -272,7 +272,7 @@ function __syz::__define_external_functions {
 				local subdir
 				for subdir in "${__syz_subdirs[@]}"; do
 					if [ -d "$_resolved_dir/$subdir" ]; then
-						__syz::__process_dir "$subdir"
+						__syz::__process_subdir "$subdir"
 					fi
 				done
 				# remember that this is loaded
@@ -319,7 +319,7 @@ function __syz::__define_external_functions {
 				local subdir
 				for subdir in "${__syz_subdirs[@]}"; do
 					# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
-					__syz::__process_dir "$subdir"
+					__syz::__process_subdir "$subdir"
 				done
 				# forget that this was loaded
 				remove-path SYZ_MODULES "$_resolved_pv"
@@ -362,7 +362,7 @@ function __syz::__define_external_functions {
 				local subdir
 				for subdir in "${__syz_subdirs[@]}"; do
 					if [ -d "$_resolved_dir/$subdir" ]; then
-						__syz::__process_dir "$subdir"
+						__syz::__process_subdir "$subdir"
 					fi
 				done
 				__syz::__unset_mode
@@ -617,7 +617,7 @@ function __syz::__define_internal_functions {
 	}
 
 
-	function __syz::__process_dir {
+	function __syz::__process_subdir {
 		local subdir="$1" ; shift
 		# FIXME: extglob for better patterns
 		# FIXME: assoc arrays for the patterns and their targets
