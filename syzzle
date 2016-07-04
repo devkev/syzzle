@@ -604,16 +604,39 @@ function __syz::__define_internal_functions {
 
 	function __syz::__process_dir {
 		local subdir="$1" ; shift
+		# FIXME: extglob for better patterns
+		# FIXME: assoc arrays for the patterns and their targets
 		case "$subdir" in
 			bin)
 				bin-dir "$subdir"
 				;;
+			share/man|man)
+				man-dir "$subdir"
+				;;
+			share/info|info)
+				info-dir "$subdir"
+				;;
+			share/pkgconfig)
+				pkgconfig-dir "$subdir"
+				;;
 			lib)
 				lib-dir "$subdir"
 				;;
-			share/man|man)
+			include)
+				# FIXME: some smarts around what language(s) are contained within
+				c-include-dir "$subdir"
+				c++-include-dir "$subdir"
+				cpp-include-dir "$subdir"
+				fortran-include-dir "$subdir"
 				;;
-			share/pkgconfig)
+			lib/python*/site-packages)
+				python-package-dir "$subdir"
+				;;
+			lib/perl5/site_perl|lib/perl5/vendor_perl)
+				perl5-module-dir "$subdir"
+				;;
+			lib/tcl)
+				tcl-lib-dir "$subdir"
 				;;
 			sw)
 				;;
