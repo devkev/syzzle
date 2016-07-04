@@ -666,6 +666,7 @@ function __syz::__define_internal_functions {
 	function __syz::__show_function_invocation {
 		local i
 		local s
+		# get a properly-quoted version of the arguments to this function
 		for i; do
 			local this="$(declare -p i)"
 			s="$s ${this#declare -- i=}"
