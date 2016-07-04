@@ -529,6 +529,11 @@ function __syz::__define_internal_functions {
 	}
 
 
+	function __syz::__real::locale-dir {
+		__syz::__prepend_or_remove_list_var : LOCPATH "$@"
+	}
+
+
 	function __syz::__do_real_dir {
 		case "$__syz_mode" in
 			show)
@@ -637,6 +642,9 @@ function __syz::__define_internal_functions {
 				;;
 			lib/tcl)
 				tcl-lib-dir "$subdir"
+				;;
+			locale)
+				locale-dir "$subdir"
 				;;
 			sw)
 				;;
