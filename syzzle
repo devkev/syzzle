@@ -534,6 +534,15 @@ function __syz::__define_internal_functions {
 	}
 
 
+	function __syz::__real::sw-dir {
+		__syz::__prepend_or_remove_list_var : SYZ_PATH "$@"
+	}
+
+	function __syz::__real::software-dir {
+		__syz::__real::sw-dir "$@"
+	}
+
+
 	function __syz::__do_real_dir {
 		case "$__syz_mode" in
 			show)
@@ -647,6 +656,7 @@ function __syz::__define_internal_functions {
 				locale-dir "$subdir"
 				;;
 			sw)
+				sw-dir "$subdir"
 				;;
 		esac
 	}
