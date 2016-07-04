@@ -246,6 +246,7 @@ function __syz::__define_external_functions {
 
 	__syz::__add_subcommand_help "load" "module[/version] [...]" "Load the specified module(s)"
 
+	# FIXME: load, unload, and show have significant repeated code.  Factor it out.
 	function syz::load {
 		local rc=0
 		local i
