@@ -605,9 +605,10 @@ function __syz::__define_internal_functions {
 
 
 	function __syz::__process_dir_existing {
+		local dir="$1" ; shift
 		local subdir
 		for subdir in "${__syz_subdirs[@]}"; do
-			if [ -d "$_resolved_dir/$subdir" ]; then
+			if [ -d "$dir/$subdir" ]; then
 				__syz::__process_subdir "$subdir"
 			fi
 		done
@@ -615,6 +616,7 @@ function __syz::__define_internal_functions {
 
 
 	function __syz::__process_dir_all {
+		local dir="$1" ; shift
 		local subdir
 		for subdir in "${__syz_subdirs[@]}"; do
 			__syz::__process_subdir "$subdir"
