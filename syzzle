@@ -269,12 +269,7 @@ function __syz::__define_external_functions {
 				__syz::__set_basedir "$_resolved_dir"
 				# FIXME: use .syzrc if present
 				# FIXME: use a .syzrc from the parent dir if present
-				local subdir
-				for subdir in "${__syz_subdirs[@]}"; do
-					if [ -d "$_resolved_dir/$subdir" ]; then
-						__syz::__process_subdir "$subdir"
-					fi
-				done
+				__syz::__process_dir_existing "$_resolved_dir"
 				# remember that this is loaded
 				append-path SYZ_MODULES "$_resolved_pv"
 				append-path SYZ_MODULES_ABS "$_resolved_dir"
@@ -316,11 +311,8 @@ function __syz::__define_external_functions {
 				__syz::__set_basedir "$_resolved_dir"
 				# FIXME: use .syzrc if present
 				# FIXME: use a .syzrc from the parent dir if present
-				local subdir
-				for subdir in "${__syz_subdirs[@]}"; do
-					# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
-					__syz::__process_subdir "$subdir"
-				done
+				# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
+				__syz::__process_dir_all "$_resolved_dir"
 				# forget that this was loaded
 				remove-path SYZ_MODULES "$_resolved_pv"
 				remove-path SYZ_MODULES_ABS "$_resolved_dir"
@@ -359,12 +351,7 @@ function __syz::__define_external_functions {
 				__syz::__set_basedir "$_resolved_dir"
 				# FIXME: use .syzrc if present
 				# FIXME: use a .syzrc from the parent dir if present
-				local subdir
-				for subdir in "${__syz_subdirs[@]}"; do
-					if [ -d "$_resolved_dir/$subdir" ]; then
-						__syz::__process_subdir "$subdir"
-					fi
-				done
+				__syz::__process_dir_existing "$_resolved_dir"
 				__syz::__unset_mode
 				__syz::__unset_basedir
 			else
@@ -616,6 +603,23 @@ function __syz::__define_internal_functions {
 		unset __syz_basedir
 	}
 
+
+	function __syz::__process_dir_existing {
+		local subdir
+		for subdir in "${__syz_subdirs[@]}"; do
+			if [ -d "$_resolved_dir/$subdir" ]; then
+				__syz::__process_subdir "$subdir"
+			fi
+		done
+	}
+
+
+	function __syz::__process_dir_all {
+		local subdir
+		for subdir in "${__syz_subdirs[@]}"; do
+			__syz::__process_subdir "$subdir"
+		done
+	}
 
 	function __syz::__process_subdir {
 		local subdir="$1" ; shift
