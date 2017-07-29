@@ -179,6 +179,8 @@ function __syz::__define_external_functions {
 		local basedir
 		local -a _modules=()
 		local -a _syz_path
+		__syz::__fancy_output
+		local fancy_output="$?"
 		__syz::__parse_list _syz_path "$SYZ_PATH"
 		if [ "$SYZ_PATH" ]; then
 			__syz::__set_nullglob
@@ -208,7 +210,7 @@ function __syz::__define_external_functions {
 					for versiondir in "$pkgdir"/*; do
 						local version="${versiondir#$pkgdir/}"
 
-						if __syz::__fancy_output; then
+						if [ "$fancy_output" = 0 ]; then
 							if [ "$version" = current -a "$current" ]; then
 								: # ignore
 							elif [ "$version" = default -a "$default" ]; then
