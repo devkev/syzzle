@@ -31,26 +31,28 @@ if [ "$quiet" = y ]; then
 
 	total_lines="$(( $(wc -l "$testdir/tests" | awk '{print$1}') ))"
 
-	function blankline {
+	function msg {
 		local current_line="$(( ${BASH_LINENO[$((${#BASH_LINENO[@]}-3))]} ))"
 		#echo "$current_line/$total_lines"
 		_progress_bar "Running tests" $current_line $total_lines
 	}
 
-	function msg {
-		:
+	function blankline {
+		msg "$@"
 	}
 
 	_progress_bar "Running tests" 0 $total_lines
 
 else
-	function blankline {
-		echo
-	}
 
 	function msg {
 		echo "$__syz_marker $*"
 	}
+
+	function blankline {
+		echo
+	}
+
 fi
 
 function do_run {
