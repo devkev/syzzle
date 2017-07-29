@@ -732,5 +732,9 @@ check modules_not_loaded 'abc/0.9'
 check no_modules_loaded
 check no_modules_inactive
 
+# FIXME: add some pathological cases around strange/unexpected characters in filenames
+# especially space, dot, comma, colon
+# in both the base dir which is in the $SYZ_PATH, and the package dir, and the version
+
 # fin
 blankline
