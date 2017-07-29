@@ -1,0 +1,182 @@
+
+function check_success {
+	msg "${FUNCNAME[0]}"
+	[ "$__syz_rc" = "0" ]
+}
+
+function check_failure {
+	local code="$1"
+	msg "${FUNCNAME[0]} $code"
+	if [ "$code" ]; then
+		[ "$__syz_rc" = "$code" ]
+	else
+		[ "$__syz_rc" != "0" ]
+	fi
+}
+
+function check_output_pattern {
+	local i
+	for i; do
+		msg "${FUNCNAME[0]} $i"
+		grep -q "$i" <<<"$__syz_o"
+	done
+}
+
+function check_output_not_pattern {
+	local i
+	for i; do
+		msg "${FUNCNAME[0]} $i"
+		! grep -q "$i" <<<"$__syz_o"
+	done
+}
+
+function check_output_exact {
+	local target="$1" ; shift
+	msg "${FUNCNAME[0]}"
+	[ "$__syz_o" = "$target" ]
+}
+
+function check_envvar_pattern {
+	local var="$1" ; shift
+	local pattern
+	for pattern; do
+		local -n value="$var"
+		msg "${FUNCNAME[0]} $var $pattern"
+		grep -q "$pattern" <<<"$value"
+	done
+}
+
+function check_envvar_not_pattern {
+	local var="$1" ; shift
+	local pattern
+	for pattern; do
+		local -n value="$var"
+		msg "${FUNCNAME[0]} $var $pattern"
+		! grep -q "$pattern" <<<"$value"
+	done
+}
+
+function check_envvar_exact {
+	local var="$1" ; shift
+	local target="$1" ; shift
+	local -n value="$var"
+	msg "${FUNCNAME[0]} $var"
+	[ "$value" = "$target" ]
+}
+
+function check_envvar_set {
+	local i
+	for i; do
+		msg "${FUNCNAME[0]} $i"
+		[ "${!i+set}" = "set" ]
+	done
+}
+
+function check_envvar_unset {
+	local i
+	for i; do
+		msg "${FUNCNAME[0]} $i"
+		[ "${!i+set}" != "set" ]
+	done
+}
+
+function check_no_modules_loaded {
+	msg "${FUNCNAME[0]}"
+	run syz loaded
+	check success
+	check output_exact ""
+	via_tty run syz loaded
+	check success
+	check output_pattern 'No modules currently loaded\.'
+}
+
+function check_no_modules_inactive {
+	msg "${FUNCNAME[0]}"
+	run syz inactive
+	check success
+	check output_exact ""
+	via_tty run syz inactive
+	check success
+	check output_pattern 'No inactive modules\.'
+}
+
+function check_modules_loaded {
+	local i
+	for i; do
+		msg "${FUNCNAME[0]} $i"
+		run syz loaded
+		check success
+		check output_pattern "^$i$"
+		via_tty run syz loaded
+		check success
+		check output_pattern 'Currently loaded modules'
+		check output_pattern "\<$i\>"
+		run syz isloaded "$i"
+		check success
+		check output_exact "$i loaded"
+	done
+}
+
+function check_modules_not_loaded {
+	local i
+	for i; do
+		msg "${FUNCNAME[0]} $i"
+		run syz loaded
+		check success
+		check output_not_pattern "^$i$"
+		via_tty run syz loaded
+		check success
+		check output_not_pattern "\<$i\>"
+		run syz isloaded "$i"
+		check success
+		check output_exact "$i not loaded"
+	done
+}
+
+# generically catch any leaked environment vars.
+# exclude: uppercase, starts with "__syz_", and the "_" variable.
+function check_no_leaked_vars {
+	if [ "$1" = "--setup" ]; then
+		declare -p $(compgen -v -o default | grep -Ev '^[A-Z]|^__syz_|^_$') > "$__syz_tmpfile"
+		declare -g __syz_vars_before="$(<"$__syz_tmpfile")"
+	else
+		msg "${FUNCNAME[0]}"
+		declare -p $(compgen -v -o default | grep -Ev '^[A-Z]|^__syz_|^_$') > "$__syz_tmpfile"
+		local __syz_vars_after="$(<"$__syz_tmpfile")"
+		if [ "$verbose" = y ]; then
+			indent
+			msg "---- start vars_before ----"
+			if [ "$__syz_vars_before" ]; then
+				echo "$__syz_vars_before"
+			fi
+			msg "---- end vars_before ----"
+			msg "---- start vars_after ----"
+			if [ "$__syz_vars_after" ]; then
+				echo "$__syz_vars_after"
+			fi
+			msg "---- end vars_after ----"
+			unindent
+		fi
+		[ "$__syz_vars_before" = "$__syz_vars_after" ]
+	fi
+}
+
+function check_no_leaked_aliases {
+	if [ "$1" = "--setup" ]; then
+		local old_rc="$__syz_rc"
+		local old_o="$__syz_o"
+		do_run alias -p
+		declare -g __syz_aliases_before="$__syz_o"
+		__syz_rc="$old_rc"
+		__syz_o="$old_o"
+	else
+		msg "${FUNCNAME[0]}"
+		local old_rc="$__syz_rc"
+		local old_o="$__syz_o"
+		do_run alias -p
+		check output_exact "$__syz_aliases_before"
+		__syz_rc="$old_rc"
+		__syz_o="$old_o"
+	fi
+}
+
