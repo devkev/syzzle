@@ -29,11 +29,10 @@ if [ "$quiet" = y ]; then
 		echo -ne "\r$msg: [${donestr// /#}${leftstr// /-}] ${progress}%"
 	}
 
-	tests_start="$(awk '$0 == "msg prelim" { print NR; exit }' "$0")"
-	total_lines="$(( $(wc -l "$0" | awk '{print$1}') - $tests_start ))"
+	total_lines="$(( $(wc -l "$testdir/tests" | awk '{print$1}') ))"
 
 	function blankline {
-		local current_line="$(( ${BASH_LINENO[$((${#BASH_LINENO[@]}-2))]} - $tests_start ))"
+		local current_line="$(( ${BASH_LINENO[$((${#BASH_LINENO[@]}-3))]} ))"
 		#echo "$current_line/$total_lines"
 		_progress_bar "Running tests" $current_line $total_lines
 	}

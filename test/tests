@@ -1,0 +1,410 @@
+
+msg prelim
+check envvar_pattern "SYZ_PATH" '^'"$basedir"'/sw$'
+check envvar_unset SYZ_{MODULES,MODULES_ABS,INACTIVE_MODULES}
+
+check no_leaked_vars --setup
+check no_leaked_aliases --setup
+
+blankline
+msg "load"
+set -e
+. ./syzzle
+set +e
+
+check no_leaked_vars
+check no_leaked_aliases
+
+check envvar_pattern "SYZ_VERSION" '.'
+check envvar_pattern "SYZ_PATH" '^'"$basedir"'/sw$'
+check envvar_set SYZ_{MODULES,MODULES_ABS,INACTIVE_MODULES}
+check envvar_exact "SYZ_MODULES" ''
+check envvar_exact "SYZ_MODULES_ABS" ''
+check envvar_exact "SYZ_INACTIVE_MODULES" ''
+
+blankline
+run syz avail
+check success
+check output_exact ''
+via_tty run syz avail
+check success
+check output_exact 'No modules available.'
+
+for i in $test_pvs; do
+	mkdir -p "$basedir/sw/$i"/{bin,lib}
+done
+unset i
+# FIXME: current and default symlinks
+
+blankline
+run syz avail
+check success
+check output_exact "$test_pvs"
+via_tty run syz avail
+check success
+check output_pattern 'Available modules'
+check output_pattern $test_pvs
+
+blankline
+run syz version
+check success
+check output_pattern "version" "$SYZ_VERSION"
+
+blankline
+run syz empty
+check success
+__syz_o_empty="$__syz_o"
+run syz
+check success
+check output_exact "$__syz_o_empty"
+run syz status
+check success
+check output_exact "$__syz_o_empty"
+
+blankline
+run syz show
+check success
+__syz_o_show="$__syz_o"
+
+blankline
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_loaded
+check no_modules_inactive
+
+blankline
+run syz load abc/1.0
+check success
+check output_pattern 'Loading' 'abc/1.0'
+check envvar_pattern 'SYZ_MODULES' 'abc/1.0'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/1.0
+check envvar_pattern 'PATH' "$basedir"/sw/abc/1.0/bin
+check envvar_pattern 'LIBRARY_PATH' "$basedir"/sw/abc/1.0/lib
+check envvar_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/abc/1.0/lib
+check envvar_pattern 'LD_RUN_PATH' "$basedir"/sw/abc/1.0/lib
+
+check modules_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_inactive
+
+blankline
+run syz load def/1.1
+check success
+check output_pattern 'Loading' 'def/1.1'
+check envvar_pattern 'SYZ_MODULES' 'def/1.1'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/def/1.1
+check envvar_pattern 'PATH' "$basedir"/sw/def/1.1/bin
+check envvar_pattern 'LIBRARY_PATH' "$basedir"/sw/def/1.1/lib
+check envvar_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/def/1.1/lib
+check envvar_pattern 'LD_RUN_PATH' "$basedir"/sw/def/1.1/lib
+
+check modules_loaded 'abc/1.0'
+check modules_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_inactive
+
+blankline
+run syz load ghi/1.2
+check success
+check output_pattern 'Loading' 'ghi/1.2'
+check envvar_pattern 'SYZ_MODULES' 'ghi/1.2'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/ghi/1.2
+check envvar_pattern 'PATH' "$basedir"/sw/ghi/1.2/bin
+check envvar_pattern 'LIBRARY_PATH' "$basedir"/sw/ghi/1.2/lib
+check envvar_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/ghi/1.2/lib
+check envvar_pattern 'LD_RUN_PATH' "$basedir"/sw/ghi/1.2/lib
+
+check modules_loaded 'abc/1.0'
+check modules_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+blankline
+run syz unload def/1.1
+check success
+check output_pattern 'Unloading' 'def/1.1'
+check envvar_not_pattern 'SYZ_MODULES' 'def/1.1'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/def/1.1
+check envvar_not_pattern 'PATH' "$basedir"/sw/def/1.1/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/def/1.1/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/def/1.1/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/def/1.1/lib
+
+check modules_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+blankline
+run syz unload abc/1.0
+check success
+check output_pattern 'Unloading' 'abc/1.0'
+check envvar_not_pattern 'SYZ_MODULES' 'abc/1.0'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/1.0
+check envvar_not_pattern 'PATH' "$basedir"/sw/abc/1.0/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/abc/1.0/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/abc/1.0/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/abc/1.0/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+blankline
+run syz load def/1.1
+check success
+check output_pattern 'Loading' 'def/1.1'
+check envvar_pattern 'SYZ_MODULES' 'def/1.1'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/def/1.1
+check envvar_pattern 'PATH' "$basedir"/sw/def/1.1/bin
+check envvar_pattern 'LIBRARY_PATH' "$basedir"/sw/def/1.1/lib
+check envvar_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/def/1.1/lib
+check envvar_pattern 'LD_RUN_PATH' "$basedir"/sw/def/1.1/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+blankline
+run syz unload ghi/1.2
+check success
+check output_pattern 'Unloading' 'ghi/1.2'
+check envvar_not_pattern 'SYZ_MODULES' 'ghi/1.2'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/ghi/1.2
+check envvar_not_pattern 'PATH' "$basedir"/sw/ghi/1.2/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/ghi/1.2/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/ghi/1.2/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/ghi/1.2/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_inactive
+
+blankline
+run syz unload def/1.1
+check success
+check output_pattern 'Unloading' 'def/1.1'
+check envvar_not_pattern 'SYZ_MODULES' 'def/1.1'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/def/1.1
+check envvar_not_pattern 'PATH' "$basedir"/sw/def/1.1/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/def/1.1/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/def/1.1/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/def/1.1/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_loaded
+check no_modules_inactive
+
+blankline
+run syz load ghi/1.2
+check success
+check output_pattern 'Loading' 'ghi/1.2'
+check envvar_pattern 'SYZ_MODULES' 'ghi/1.2'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/ghi/1.2
+check envvar_pattern 'PATH' "$basedir"/sw/ghi/1.2/bin
+check envvar_pattern 'LIBRARY_PATH' "$basedir"/sw/ghi/1.2/lib
+check envvar_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/ghi/1.2/lib
+check envvar_pattern 'LD_RUN_PATH' "$basedir"/sw/ghi/1.2/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+blankline
+run syz load ghi/1.2
+check success
+check output_pattern 'Module ghi/1.2 is already loaded, skipping'
+check envvar_pattern 'SYZ_MODULES' 'ghi/1.2'
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/ghi/1.2
+check envvar_pattern 'PATH' "$basedir"/sw/ghi/1.2/bin
+check envvar_pattern 'LIBRARY_PATH' "$basedir"/sw/ghi/1.2/lib
+check envvar_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/ghi/1.2/lib
+check envvar_pattern 'LD_RUN_PATH' "$basedir"/sw/ghi/1.2/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+# loading multiple modules on one cmdline
+blankline
+run syz load {abc/1.0,def/1.1}
+check success
+check output_pattern 'Loading' {abc/1.0,def/1.1}
+check envvar_pattern 'SYZ_MODULES' {abc/1.0,def/1.1}
+check envvar_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/{abc/1.0,def/1.1}
+check envvar_pattern 'PATH' "$basedir"/sw/{abc/1.0,def/1.1}/bin
+check envvar_pattern 'LIBRARY_PATH' "$basedir"/sw/{abc/1.0,def/1.1}/lib
+check envvar_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/{abc/1.0,def/1.1}/lib
+check envvar_pattern 'LD_RUN_PATH' "$basedir"/sw/{abc/1.0,def/1.1}/lib
+
+check modules_loaded 'abc/1.0'
+check modules_loaded 'def/1.1'
+check modules_loaded 'ghi/1.2'
+check no_modules_inactive
+
+# unloading multiple modules on one cmdline
+blankline
+run syz unload {abc/1.0,def/1.1,ghi/1.2}
+check success
+check output_pattern 'Unloading' {abc/1.0,def/1.1,ghi/1.2}
+check envvar_not_pattern 'SYZ_MODULES' {abc/1.0,def/1.1,ghi/1.2}
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/{abc/1.0,def/1.1,ghi/1.2}
+check envvar_not_pattern 'PATH' "$basedir"/sw/{abc/1.0,def/1.1,ghi/1.2}/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/{abc/1.0,def/1.1,ghi/1.2}/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/{abc/1.0,def/1.1,ghi/1.2}/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/{abc/1.0,def/1.1,ghi/1.2}/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_loaded
+check no_modules_inactive
+
+# trying to load module with unknown package name
+blankline
+run syz load xyz/0.9
+check failure
+check output_pattern 'No such module: xyz/0.9'
+check envvar_not_pattern 'SYZ_MODULES' 'xyz/0.9'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/xyz/0.9
+check envvar_not_pattern 'PATH' "$basedir"/sw/xyz/0.9/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/xyz/0.9/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/xyz/0.9/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/xyz/0.9/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check modules_not_loaded 'xyz/0.9'
+check no_modules_loaded
+check no_modules_inactive
+
+# trying to load module with unknown package name
+blankline
+run syz load xyz
+check failure
+check output_pattern 'No such module: xyz'
+check envvar_not_pattern 'SYZ_MODULES' 'xyz'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/xyz
+check envvar_not_pattern 'PATH' "$basedir"/sw/xyz/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/xyz/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/xyz/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/xyz/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check modules_not_loaded 'xyz'
+check no_modules_loaded
+check no_modules_inactive
+
+# trying to load module with unknown version
+blankline
+run syz load abc/0.9
+check failure
+check output_pattern 'No such module: abc/0.9'
+check envvar_not_pattern 'SYZ_MODULES' 'abc/0.9'
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/0.9
+check envvar_not_pattern 'PATH' "$basedir"/sw/abc/0.9/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/abc/0.9/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/abc/0.9/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/abc/0.9/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check modules_not_loaded 'abc/0.9'
+check no_modules_loaded
+check no_modules_inactive
+
+# unload module which is known but not loaded
+blankline
+run syz unload abc/1.0
+check success
+check output_pattern 'Error: No module named abc/1.0 is loaded'
+check envvar_not_pattern 'SYZ_MODULES' abc/1.0
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/1.0
+check envvar_not_pattern 'PATH' "$basedir"/sw/abc/1.0/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/abc/1.0/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/abc/1.0/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/abc/1.0/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check no_modules_loaded
+check no_modules_inactive
+
+# unload module with unknown package name
+blankline
+run syz unload xyz/0.9
+check success
+check output_pattern 'Error: No module named xyz/0.9 is loaded'
+check envvar_not_pattern 'SYZ_MODULES' xyz/0.9
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/xyz/0.9
+check envvar_not_pattern 'PATH' "$basedir"/sw/xyz/0.9/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/xyz/0.9/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/xyz/0.9/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/xyz/0.9/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check modules_not_loaded 'xyz/0.9'
+check no_modules_loaded
+check no_modules_inactive
+
+# unload module with unknown package name
+blankline
+run syz unload xyz
+check success
+check output_pattern 'Error: No module named xyz is loaded'
+check envvar_not_pattern 'SYZ_MODULES' xyz
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/xyz
+check envvar_not_pattern 'PATH' "$basedir"/sw/xyz/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/xyz/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/xyz/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/xyz/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check modules_not_loaded 'xyz'
+check no_modules_loaded
+check no_modules_inactive
+
+# unload module with unknown version
+blankline
+run syz unload abc/0.9
+check success
+check output_pattern 'Error: No module named abc/0.9 is loaded'
+check envvar_not_pattern 'SYZ_MODULES' abc/0.9
+check envvar_not_pattern 'SYZ_MODULES_ABS' "$basedir"/sw/abc/0.9
+check envvar_not_pattern 'PATH' "$basedir"/sw/abc/0.9/bin
+check envvar_not_pattern 'LIBRARY_PATH' "$basedir"/sw/abc/0.9/lib
+check envvar_not_pattern 'LD_LIBRARY_PATH' "$basedir"/sw/abc/0.9/lib
+check envvar_not_pattern 'LD_RUN_PATH' "$basedir"/sw/abc/0.9/lib
+
+check modules_not_loaded 'abc/1.0'
+check modules_not_loaded 'def/1.1'
+check modules_not_loaded 'ghi/1.2'
+check modules_not_loaded 'abc/0.9'
+check no_modules_loaded
+check no_modules_inactive
+
+# FIXME: add some pathological cases around strange/unexpected characters in filenames
+# especially space, dot, comma, colon
+# in both the base dir which is in the $SYZ_PATH, and the package dir, and the version
+
+
+# fin
+blankline
