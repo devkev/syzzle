@@ -1,0 +1,106 @@
+
+__syz_marker="+"
+
+function indent {
+	__syz_marker="$__syz_marker+"
+}
+
+function unindent {
+	__syz_marker="${__syz_marker%+}"
+}
+
+if [ "$quiet" = y ]; then
+
+	# This function based on https://github.com/fearside/ProgressBar/blob/master/progressbar.sh
+	function _progress_bar {
+		local msg="$1" ; shift
+		local sofar="$1" ; shift
+		local total="$1" ; shift
+
+		local -i progress=($sofar*100/$total*100)/100
+		local -i done=(${progress}*4)/10
+		local -i left=40-$done
+
+		# Build progressbar string lengths
+		local donestr=$(printf "%${done}s")
+		local leftstr=$(printf "%${left}s")
+
+		# eg: Progress : [########################################] 100%
+		echo -ne "\r$msg: [${donestr// /#}${leftstr// /-}] ${progress}%"
+	}
+
+	tests_start="$(awk '$0 == "msg prelim" { print NR; exit }' "$0")"
+	total_lines="$(( $(wc -l "$0" | awk '{print$1}') - $tests_start ))"
+
+	function blankline {
+		local current_line="$(( ${BASH_LINENO[$((${#BASH_LINENO[@]}-2))]} - $tests_start ))"
+		#echo "$current_line/$total_lines"
+		_progress_bar "Running tests" $current_line $total_lines
+	}
+
+	function msg {
+		:
+	}
+
+	_progress_bar "Running tests" 0 $total_lines
+
+else
+	function blankline {
+		echo
+	}
+
+	function msg {
+		echo "$__syz_marker $*"
+	}
+fi
+
+function do_run {
+	indent
+	msg "${FUNCNAME[0]} $*"
+	"$@" > "$__syz_tmpfile"
+	__syz_rc="$?"
+	__syz_o="$(<"$__syz_tmpfile")"
+	if [ "$verbose" = y ]; then
+		indent
+		msg "rc=$__syz_rc"
+		msg "---- start output ----"
+		if [ "$__syz_o" ]; then
+			echo "$__syz_o"
+		fi
+		msg "---- end output ----"
+		unindent
+	fi
+	unindent
+}
+
+function run {
+	indent
+	check no_leaked_vars --setup
+	check no_leaked_aliases --setup
+	do_run "$@"
+	check no_leaked_vars
+	check no_leaked_aliases
+	unindent
+}
+
+function via_tty {
+	indent
+	msg "${FUNCNAME[0]} $*"
+	function tty {
+		:
+	}
+	"$@"
+	unset -f tty
+	unindent
+}
+
+
+function check {
+	local __syz_what="$1" ; shift
+	indent
+	set -e
+	check_"$__syz_what" "$@"
+	set +e
+	unindent
+}
+
