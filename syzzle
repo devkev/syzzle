@@ -639,6 +639,9 @@ function __syz::__define_internal_functions {
 			share/info|info)
 				info-dir "$subdir"
 				;;
+			lib/pkgconfig)
+				pkgconfig-dir "$subdir"
+				;;
 			share/pkgconfig)
 				pkgconfig-dir "$subdir"
 				;;
@@ -974,6 +977,7 @@ __syz_subdirs+=(bin)
 __syz_subdirs+=(lib)
 __syz_subdirs+=(man)
 __syz_subdirs+=(share/man)
+__syz_subdirs+=(lib/pkgconfig)
 __syz_subdirs+=(share/pkgconfig)
 __syz_subdirs+=(sw)
 
