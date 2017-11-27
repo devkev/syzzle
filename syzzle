@@ -259,12 +259,12 @@ function __syz::__define_external_functions {
 			if __syz::__is_loaded "$i" _actually_loaded; then
 				# FIXME: maybe force reload (ie. unload then reload) it in this case?
 				# FIXME: if already loaded, swap versions (ie. unload first)
-				echo "Module $_actually_loaded is already loaded, skipping"
+				__syz::__verbose_output "Module $_actually_loaded is already loaded, skipping"
 				continue
 			fi
 
 			if __syz::__resolve_loadable_dir "$i" _resolved_pv _resolved_dir; then
-				echo "Loading $_resolved_pv from $_resolved_dir"
+				__syz::__verbose_output "Loading $_resolved_pv from $_resolved_dir"
 				# actually load it
 				# FIXME: this should be a function
 				__syz::__set_mode load
@@ -306,7 +306,7 @@ function __syz::__define_external_functions {
 
 			# FIXME: do not search for the right dir. instead, use the dir from $SYZ_MODULES_ABS
 			if __syz::__resolve_loadable_dir "$_actually_loaded" _resolved_pv _resolved_dir; then
-				echo "Unloading $_resolved_pv from $_resolved_dir"
+				__syz::__verbose_output "Unloading $_resolved_pv from $_resolved_dir"
 				# actually unload it
 				# FIXME: this should be a function
 				__syz::__set_mode unload
@@ -575,8 +575,8 @@ function __syz::__define_internal_functions {
 		# FIXME: use a hash of the file contents instead
 		local modtime="$(stat -L -c '%Y' "$SYZ_SOURCE")"
 		if [ "$SYZ_SOURCED_AT" -a "$modtime" -a "$modtime" -gt "$SYZ_SOURCED_AT" ]; then
-			echo "syz: updated, auto-reloading..." 1>&2
-			echo 1>&2
+			__syz::__verbose_output "syz: updated, auto-reloading..." 1>&2
+			__syz::__verbose_output 1>&2
 			syz::restart
 			# FIXME: the re-call of self should be done by the caller, who can simply do "$0" "$@"
 			syz "$@"
@@ -748,6 +748,27 @@ function __syz::__define_internal_functions {
 		# FIXME: allow the user to override
 		# Fancy output for terminals, plain otherwise
 		tty -s 0<&1
+	}
+
+	function __syz::__is_verbose_output {
+		# FIXME: allow the user to override with command line opts
+		case "$SYZ_VERBOSE" in
+			0|n|no|false)
+				return 1
+				;;
+			1|y|yes|true)
+				return 0
+				;;
+			*)
+				return 1
+				;;
+		esac
+	}
+
+	function __syz::__verbose_output {
+		if __syz::__is_verbose_output; then
+			echo "$*"
+		fi
 	}
 
 	function __syz::__columnate {
