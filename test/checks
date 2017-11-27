@@ -36,6 +36,11 @@ function check_output_exact {
 	[ "$__syz_o" = "$target" ]
 }
 
+function check_output_empty {
+	msg "${FUNCNAME[0]}"
+	[ "$__syz_o" = "" ]
+}
+
 function check_envvar_pattern {
 	local var="$1" ; shift
 	local pattern
