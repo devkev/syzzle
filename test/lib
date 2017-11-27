@@ -9,6 +9,19 @@ function unindent {
 	__syz_marker="${__syz_marker%+}"
 }
 
+__syz_msg_location_file=()
+__syz_msg_location_line=()
+
+function mark_location {
+	__syz_msg_location_file+=("${BASH_SOURCE[2]}")    # push our caller's caller
+	__syz_msg_location_line+=("${BASH_LINENO[1]}")    # push our caller's caller
+}
+
+function unmark_location {
+	unset "__syz_msg_location_file[$((${#__syz_msg_location_file[@]}-1))]"    # pop
+	unset "__syz_msg_location_line[$((${#__syz_msg_location_line[@]}-1))]"    # pop
+}
+
 if [ "$quiet" = y ]; then
 
 	# This function based on https://github.com/fearside/ProgressBar/blob/master/progressbar.sh
@@ -45,8 +58,29 @@ if [ "$quiet" = y ]; then
 
 else
 
+	__syz_max_location_file_width=0
+	__syz_max_location_line_width=3
+
 	function msg {
-		echo "$__syz_marker $*"
+		if [ "${#__syz_msg_location_file[@]}" -eq 0 ]; then
+			# use the caller of msg in this case
+			local location_file="${BASH_SOURCE[1]}"
+			local location_line="${BASH_LINENO[0]}"
+		else
+			local location_file="${__syz_msg_location_file[$((${#__syz_msg_location_file[@]}-1))]}"
+			local location_line="${__syz_msg_location_line[$((${#__syz_msg_location_line[@]}-1))]}"
+		fi
+
+		location_file="${location_file#./}"
+
+		if [ "$__syz_max_location_file_width" -lt "${#location_file}" ]; then
+			__syz_max_location_file_width="${#location_file}"
+		fi
+		if [ "$__syz_max_location_line_width" -lt "${#location_line}" ]; then
+			__syz_max_location_line_width="${#location_line}"
+		fi
+
+		printf "[%-${__syz_max_location_file_width}s %${__syz_max_location_line_width}s] %s %s\n" "$location_file" "$location_line" "$__syz_marker" "$*"
 	}
 
 	function blankline {
@@ -57,6 +91,7 @@ fi
 
 function do_run {
 	indent
+	mark_location
 	msg "${FUNCNAME[0]} $*"
 	"$@" > "$__syz_tmpfile"
 	__syz_rc="$?"
@@ -71,27 +106,33 @@ function do_run {
 		msg "---- end output ----"
 		unindent
 	fi
+	unmark_location
 	unindent
 }
 
 function run {
 	indent
+	mark_location
+	msg "${FUNCNAME[0]} $*"
 	check no_leaked_vars --setup
 	check no_leaked_aliases --setup
 	do_run "$@"
 	check no_leaked_vars
 	check no_leaked_aliases
+	unmark_location
 	unindent
 }
 
 function via_tty {
 	indent
+	mark_location
 	msg "${FUNCNAME[0]} $*"
 	function tty {
 		:
 	}
 	"$@"
 	unset -f tty
+	unmark_location
 	unindent
 }
 
@@ -99,9 +140,11 @@ function via_tty {
 function check {
 	local __syz_what="$1" ; shift
 	indent
+	mark_location
 	set -e
 	check_"$__syz_what" "$@"
 	set +e
+	unmark_location
 	unindent
 }
 

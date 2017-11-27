@@ -136,11 +136,11 @@ function check_modules_not_loaded {
 # generically catch any leaked environment vars.
 # exclude: uppercase, starts with "__syz_", and the "_" variable.
 function check_no_leaked_vars {
+	msg "${FUNCNAME[0]} $*"
 	if [ "$1" = "--setup" ]; then
 		declare -p $(compgen -v -o default | grep -Ev '^[A-Z]|^__syz_|^_$') > "$__syz_tmpfile"
 		declare -g __syz_vars_before="$(<"$__syz_tmpfile")"
 	else
-		msg "${FUNCNAME[0]}"
 		declare -p $(compgen -v -o default | grep -Ev '^[A-Z]|^__syz_|^_$') > "$__syz_tmpfile"
 		local __syz_vars_after="$(<"$__syz_tmpfile")"
 		if [ "$verbose" = y ]; then
@@ -162,6 +162,7 @@ function check_no_leaked_vars {
 }
 
 function check_no_leaked_aliases {
+	msg "${FUNCNAME[0]} $*"
 	if [ "$1" = "--setup" ]; then
 		local old_rc="$__syz_rc"
 		local old_o="$__syz_o"
@@ -170,7 +171,6 @@ function check_no_leaked_aliases {
 		__syz_rc="$old_rc"
 		__syz_o="$old_o"
 	else
-		msg "${FUNCNAME[0]}"
 		local old_rc="$__syz_rc"
 		local old_o="$__syz_o"
 		do_run alias -p
