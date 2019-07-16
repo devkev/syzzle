@@ -995,6 +995,7 @@ __syz_nl='
 
 declare -a __syz_subdirs
 __syz_subdirs+=(bin)
+__syz_subdirs+=(include)
 __syz_subdirs+=(lib)
 __syz_subdirs+=(man)
 __syz_subdirs+=(share/man)
