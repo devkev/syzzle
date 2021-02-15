@@ -927,7 +927,15 @@ function __syz::__define_internal_functions {
 		local sep="$1" ; shift
 		local var="$1" ; shift
 		local i
-		# FIXME: if prepending, process the args in reverse order
+
+		# if prepending, process the args in reverse order (so that they end up in the order given)
+		case "$type" in
+			prepend)
+				# https://unix.stackexchange.com/questions/560697/how-to-reverse-shell-arguments
+				local flag=''; for a in "$@"; do set -- "$a" ${flag-"$@"}; unset flag; done
+				;;
+		esac
+
 		for i; do
 			__syz::__remove_list_var "remove" "$sep" "$var" "$i"
 			case "$type" in
