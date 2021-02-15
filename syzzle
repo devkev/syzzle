@@ -900,6 +900,18 @@ function __syz::__define_internal_functions {
 		esac
 	}
 
+	function __syz::__is_present_list_var {
+		local sep="$1" ; shift
+		local var="$1" ; shift
+		local val="$1" ; shift
+		case "${!var}" in
+			*"$sep$val$sep"*)  return 0 ;;  # true, it's present
+			     "$val$sep"*)  return 0 ;;  # true, it's present
+			*"$sep$val")       return 0 ;;  # true, it's present
+			     "$val")       return 0 ;;  # true, it's present
+		esac
+		return 1  # false, it's not present
+	}
 
 	function __syz::__add_list_var {
 		local type="$1" ; shift
@@ -915,18 +927,12 @@ function __syz::__define_internal_functions {
 		local sep="$1" ; shift
 		local var="$1" ; shift
 		local i
+		# FIXME: if prepending, process the args in reverse order
 		for i; do
-			case "${!var}" in
-				*"$sep$i$sep"*)  ;;  # Already present
-					 "$i$sep"*)  ;;  # Already present
-				*"$sep$i")       ;;  # Already present
-					 "$i")       ;;  # Already present
-				*)
-					case "$type" in
-						prepend) declare -gx "$var"="$i${!var:+$sep}${!var}" ;;
-						append)  declare -gx "$var"="${!var}${!var:+$sep}$i" ;;
-					esac
-					;;
+			__syz::__remove_list_var "remove" "$sep" "$var" "$i"
+			case "$type" in
+				prepend) declare -gx "$var"="$i${!var:+$sep}${!var}" ;;
+				append)  declare -gx "$var"="${!var}${!var:+$sep}$i" ;;
 			esac
 		done
 	}
@@ -946,13 +952,14 @@ function __syz::__define_internal_functions {
 		local var="$1" ; shift
 		local i
 		for i; do
-			case "${!var}" in
-				*"$sep$i$sep"*) declare -gx "$var"="${!var/$sep$i$sep/$sep}" ;;
-					 "$i$sep"*) declare -gx "$var"="${!var/#$i$sep}" ;;
-				*"$sep$i")      declare -gx "$var"="${!var/%$sep$i}" ;;
-					 "$i")      declare -gx "$var"="" ;;
-				*)  ;;  # Not present
-			esac
+			while __syz::__is_present_list_var "$sep" "$var" "$i"; do
+				case "${!var}" in
+					*"$sep$i$sep"*) declare -gx "$var"="${!var/$sep$i$sep/$sep}" ;;
+					     "$i$sep"*) declare -gx "$var"="${!var/#$i$sep}" ;;
+					*"$sep$i")      declare -gx "$var"="${!var/%$sep$i}" ;;
+					     "$i")      declare -gx "$var"="" ;;
+				esac
+			done
 		done
 	}
 
