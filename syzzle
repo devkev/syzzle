@@ -412,17 +412,11 @@ function __syz::__define_interface_functions {
 
 	local i
 
-	for i in prepend append remove; do
-		eval function "$i"-path '{
-			__syz::__adjust_list_var '"$i"' : "$@"
-		}'
-	done
-
 	for i in $(compgen -A function __syz::__real::); do
 		case "$i" in
-			*-dir)
+			*-dir|*-path)
 				eval function ${i#__syz::__real::} '{
-					__syz::__do_real_dir "$@"
+					__syz::__do_real_dir_or_path "$@"
 				}'
 				;;
 		esac
@@ -445,22 +439,22 @@ function __syz::__define_internal_functions {
 
 
 	function __syz::__real::bin-dir {
-		__syz::__prepend_or_remove_list_var : PATH "$@"
+		__syz::__prepend_or_remove_list_var : PATH "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::man-dir {
-		__syz::__prepend_or_remove_list_var : MANPATH "$@"
+		__syz::__prepend_or_remove_list_var : MANPATH "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::info-dir {
-		__syz::__prepend_or_remove_list_var : INFOPATH "$@"
+		__syz::__prepend_or_remove_list_var : INFOPATH "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::pkgconfig-dir {
-		__syz::__prepend_or_remove_list_var : PKG_CONFIG_PATH "$@"
+		__syz::__prepend_or_remove_list_var : PKG_CONFIG_PATH "$(__syz::__absolutify_all "$@")"
 	}
 
 	function __syz::__real::pkg-config-dir {
@@ -469,19 +463,19 @@ function __syz::__define_internal_functions {
 
 
 	function __syz::__real::lib-dir {
-		__syz::__prepend_or_remove_list_var : LIBRARY_PATH "$@"
-		__syz::__prepend_or_remove_list_var : LD_LIBRARY_PATH "$@"
-		__syz::__prepend_or_remove_list_var : LD_RUN_PATH "$@"
+		__syz::__prepend_or_remove_list_var : LIBRARY_PATH "$(__syz::__absolutify_all "$@")"
+		__syz::__prepend_or_remove_list_var : LD_LIBRARY_PATH "$(__syz::__absolutify_all "$@")"
+		__syz::__prepend_or_remove_list_var : LD_RUN_PATH "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::c-include-dir {
-		__syz::__prepend_or_remove_list_var : C_INCLUDE_PATH "$@"
+		__syz::__prepend_or_remove_list_var : C_INCLUDE_PATH "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::c++-include-dir {
-		__syz::__prepend_or_remove_list_var : CPLUS_INCLUDE_PATH "$@"
+		__syz::__prepend_or_remove_list_var : CPLUS_INCLUDE_PATH "$(__syz::__absolutify_all "$@")"
 	}
 
 	function __syz::__real::cxx-include-dir {
@@ -490,42 +484,42 @@ function __syz::__define_internal_functions {
 
 
 	function __syz::__real::cpp-include-dir {
-		__syz::__prepend_or_remove_list_var : CPATH "$@"
+		__syz::__prepend_or_remove_list_var : CPATH "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::fortran-include-dir {
-		__syz::__prepend_or_remove_list_var : FPATH "$@"
+		__syz::__prepend_or_remove_list_var : FPATH "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::python-package-dir {
-		__syz::__prepend_or_remove_list_var : PYTHONPATH "$@"
+		__syz::__prepend_or_remove_list_var : PYTHONPATH "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::perl-module-dir {
-		__syz::__prepend_or_remove_list_var : PERLLIB "$@"
+		__syz::__prepend_or_remove_list_var : PERLLIB "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::perl5-module-dir {
-		__syz::__prepend_or_remove_list_var : PERL5LIB "$@"
+		__syz::__prepend_or_remove_list_var : PERL5LIB "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::tcl-lib-dir {
-		__syz::__prepend_or_remove_list_var ' ' TCLLIBPATH "$@"
+		__syz::__prepend_or_remove_list_var ' ' TCLLIBPATH "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::locale-dir {
-		__syz::__prepend_or_remove_list_var : LOCPATH "$@"
+		__syz::__prepend_or_remove_list_var : LOCPATH "$(__syz::__absolutify_all "$@")"
 	}
 
 
 	function __syz::__real::sw-dir {
-		__syz::__prepend_or_remove_list_var : SYZ_PATH "$@"
+		__syz::__prepend_or_remove_list_var : SYZ_PATH "$(__syz::__absolutify_all "$@")"
 	}
 
 	function __syz::__real::software-dir {
@@ -533,18 +527,34 @@ function __syz::__define_internal_functions {
 	}
 
 
-	function __syz::__do_real_dir {
+	function __syz::__real::prepend-env-dir {
+		local var="$1"; shift
+		__syz::__prepend_or_remove_list_var : "$var" "$(__syz::__absolutify_all "$@")"
+	}
+
+
+	function __syz::__real::append-env-dir {
+		local var="$1"; shift
+		__syz::__append_or_remove_list_var : "$var" "$(__syz::__absolutify_all "$@")"
+	}
+
+
+	local i
+	for i in prepend append remove; do
+		eval function __syz::__real::"$i"-path '{
+			__syz::__adjust_list_var '"$i"' : "$@"
+		}'
+	done
+	unset i
+
+
+	function __syz::__do_real_dir_or_path {
 		case "$__syz_mode" in
 			show)
 				__syz::__show_function_invocation "$@"
 				;;
 			*)
-				local i
-				local -a args
-				for i; do
-					args+=("$(__syz::__absolutify "$i")")
-				done
-				__syz::__real::"${FUNCNAME[1]}" "${args[@]}"
+				__syz::__real::"${FUNCNAME[1]}" "$@"
 				;;
 		esac
 	}
@@ -606,6 +616,13 @@ function __syz::__define_internal_functions {
 	}
 
 
+	function __syz::__process_dir_syzrc {
+		local dir="$1" ; shift
+		if [ -r "$dir"/.syzrc ]; then
+			. "$dir"/.syzrc
+		fi
+	}
+
 	function __syz::__process_dir_existing {
 		local dir="$1" ; shift
 		local subdir
@@ -614,6 +631,7 @@ function __syz::__define_internal_functions {
 				__syz::__process_subdir "$subdir"
 			fi
 		done
+		__syz::__process_dir_syzrc "$dir"
 	}
 
 
@@ -623,6 +641,7 @@ function __syz::__define_internal_functions {
 		for subdir in "${__syz_subdirs[@]}"; do
 			__syz::__process_subdir "$subdir"
 		done
+		__syz::__process_dir_syzrc "$dir"
 	}
 
 	function __syz::__process_subdir {
@@ -866,6 +885,9 @@ function __syz::__define_internal_functions {
 				/*)
 					echo "$1"
 					;;
+				.|"")
+					echo "$__syz_basedir"
+					;;
 				*)
 					echo "$__syz_basedir/$1"
 					;;
@@ -875,12 +897,25 @@ function __syz::__define_internal_functions {
 		fi
 	}
 
-
-	declare -gA __syz__prepend_or_remove=([load]="prepend" [unload]="remove")
+	function __syz::__absolutify_all {
+		local i
+		local -a args
+		for i; do
+			args+=("$(__syz::__absolutify "$i")")
+		done
+		echo "${args[@]}"
+	}
 
 
 	function __syz::__prepend_or_remove_list_var {
-		__syz::__adjust_list_var "${__syz__prepend_or_remove[$__syz_mode]}" "$@"
+		local -A prepend_or_remove=([load]="prepend" [unload]="remove")
+		__syz::__adjust_list_var "${prepend_or_remove[$__syz_mode]}" "$@"
+	}
+
+
+	function __syz::__append_or_remove_list_var {
+		local -A append_or_remove=([load]="append" [unload]="remove")
+		__syz::__adjust_list_var "${append_or_remove[$__syz_mode]}" "$@"
 	}
 
 
