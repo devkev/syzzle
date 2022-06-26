@@ -269,8 +269,6 @@ function __syz::__define_external_functions {
 				# FIXME: this should be a function
 				__syz::__set_mode load
 				__syz::__set_basedir "$_resolved_dir"
-				# FIXME: use .syzrc if present
-				# FIXME: use a .syzrc from the parent dir if present
 				__syz::__process_dir_existing "$_resolved_dir"
 				# remember that this is loaded
 				append-path SYZ_MODULES "$_resolved_pv"
@@ -311,8 +309,6 @@ function __syz::__define_external_functions {
 				# FIXME: this should be a function
 				__syz::__set_mode unload
 				__syz::__set_basedir "$_resolved_dir"
-				# FIXME: use .syzrc if present
-				# FIXME: use a .syzrc from the parent dir if present
 				# aggressively try to unload everything, even if the subdir doesn't actually exist anymore.
 				__syz::__process_dir_all "$_resolved_dir"
 				# forget that this was loaded
@@ -351,8 +347,6 @@ function __syz::__define_external_functions {
 				# FIXME: this should be a function
 				__syz::__set_mode show
 				__syz::__set_basedir "$_resolved_dir"
-				# FIXME: use .syzrc if present
-				# FIXME: use a .syzrc from the parent dir if present
 				__syz::__process_dir_existing "$_resolved_dir"
 				__syz::__unset_mode
 				__syz::__unset_basedir
@@ -538,6 +532,8 @@ function __syz::__define_internal_functions {
 		__syz::__append_or_remove_list_var : "$var" "$(__syz::__absolutify_all "$@")"
 	}
 
+	# FIXME: add a "set-env-dir" variant, along with "set-path" and "unset-path" helpers below
+
 
 	local i
 	for i in prepend append remove; do
@@ -620,6 +616,8 @@ function __syz::__define_internal_functions {
 		local dir="$1" ; shift
 		if [ -r "$dir"/.syzrc ]; then
 			. "$dir"/.syzrc
+		elif [ -d "$dir" -a -r "$dir"/../.syzrc ]; then
+			. "$dir"/../.syzrc
 		fi
 	}
 
@@ -827,13 +825,15 @@ function __syz::__define_internal_functions {
 
 	function __syz::__is_loadable_dir {
 		# check for a valid subdir or .syzrc
-		# FIXME: .syzrc in the parent dir is also acceptable
-		if [ -r "$1/.syzrc" ]; then
+		local dir="$1" ; shift
+		if [ -r "$dir/.syzrc" ]; then
+			return 0
+		elif [ -d "$dir" -a -r "$dir"/../.syzrc ]; then
 			return 0
 		fi
 		local i
 		for i in "${__syz_subdirs[@]}"; do
-			if [ -d "$1/$i" ]; then
+			if [ -d "$dir/$i" ]; then
 				return 0
 			fi
 		done
