@@ -156,7 +156,7 @@ function __syz::__define_external_functions {
 		__syz::__parse_list _loaded "$SYZ_MODULES"
 		local _loaded_str
 		__syz::__stringify_array -d "$__syz_nl" _loaded_str _loaded
-		__syz::__columnate "Currently loaded modules" "No modules currently loaded." <<< "$_loaded_str"
+		__syz::__columnate "Currently loaded modules" "No modules currently loaded." '' <<< "$_loaded_str"
 	}
 
 
@@ -167,7 +167,7 @@ function __syz::__define_external_functions {
 		__syz::__parse_list _loaded "$SYZ_INACTIVE_MODULES"
 		local _loaded_str
 		__syz::__stringify_array -d "$__syz_nl" _loaded_str _loaded
-		__syz::__columnate "Inactive modules" "No inactive modules." <<< "$_loaded_str"
+		__syz::__columnate "Inactive modules" "No inactive modules." '' <<< "$_loaded_str"
 	}
 
 
@@ -181,6 +181,23 @@ function __syz::__define_external_functions {
 		local -a _syz_path
 		__syz::__fancy_output
 		local fancy_output="$?"
+
+		# Each of these needs to be a multiple of 8 chars (the tab stop size), to avoid confusing column(1)
+		# which doesn't understand or recognise escape sequences.  The easiest way to ensure that it's
+		# a multiple of 8 chars is to just repeat it 8 times....  which is a horrible ugly hack, but it does work.
+		local fmt_bold="$(tput bold)"  # 1
+		fmt_bold="$fmt_bold$fmt_bold"  # 2
+		fmt_bold="$fmt_bold$fmt_bold"  # 4
+		fmt_bold="$fmt_bold$fmt_bold"  # 8
+		local fmt_normal="$(tput sgr0)"      # 1
+		fmt_normal="$fmt_normal$fmt_normal"  # 2
+		fmt_normal="$fmt_normal$fmt_normal"  # 4
+		fmt_normal="$fmt_normal$fmt_normal"  # 8
+
+		# The control sequences above make the apparent width of the terminal smaller.
+		# So we pad out the width by a corresponding amount.
+		local extra_cols="$(( ${#fmt_bold} + ${#fmt_normal} ))"
+
 		__syz::__parse_list _syz_path "$SYZ_PATH"
 		if [ "$SYZ_PATH" ]; then
 			__syz::__set_nullglob
@@ -220,16 +237,20 @@ function __syz::__define_external_functions {
 							elif [ "$version" = default -a "$default" ]; then
 								: # ignore
 							elif __syz::__is_loadable_dir "$versiondir"; then
+								local prefix=""
 								local suffix=""
 								if [ "$default_version" = "$version" ]; then
-									suffix+=" *"
+									prefix+="${fmt_bold}"
+									suffix+="${fmt_normal} *"
+								else
+									suffix+="${fmt_bold}${fmt_normal}"
 								fi
 								if [ "$current" = "$version" ]; then
 									suffix+=" (current)"
 								elif [ "$default" = "$version" ]; then
 									suffix+=" (default)"
 								fi
-								_modules+=("$pkgname/$version$suffix")
+								_modules+=("$prefix$pkgname/$version$suffix")
 							else
 								# not loadable
 								: # ignore
@@ -246,7 +267,7 @@ function __syz::__define_external_functions {
 		fi
 		local _str
 		__syz::__stringify_array -d "$__syz_nl" _str _modules
-		__syz::__columnate "Available modules" "No modules available." <<< "$_str"
+		__syz::__columnate "Available modules" "No modules available." "$extra_cols" <<< "$_str"
 	}
 
 
@@ -827,9 +848,8 @@ function __syz::__define_internal_functions {
 
 
 	function __syz::__fancy_output {
-		# FIXME: allow the user to override
 		# Fancy output for terminals, plain otherwise
-		tty -s 0<&1
+		[ "$SYZ_FORCE_FANCY_OUTPUT" ] || tty -s 0<&1
 	}
 
 	function __syz::__is_verbose_output {
@@ -856,6 +876,11 @@ function __syz::__define_internal_functions {
 	function __syz::__columnate {
 		local header="$1" ; shift
 		local emptymsg="$1" ; shift
+		local extra_cols="$1" ; shift
+		local -a extra_column_args
+		if [ "$extra_cols" ]; then
+			extra_column_args+=(-c "$(( $COLUMNS + $extra_cols ))")
+		fi
 		local output="$(cat "$@")"
 		if __syz::__fancy_output; then
 			if [ "$output" ]; then
@@ -870,7 +895,7 @@ function __syz::__define_internal_functions {
 				while read dummy; do
 					numlines=$(($numlines + 1))
 				done <<< "$output"
-				awk -v numlines="$numlines" 'NF > 0 { printf("%"length(numlines)"s) %s\n", NR, $0); }' <<< "$output" | column
+				awk -v numlines="$numlines" 'NF > 0 { printf("%"length(numlines)"s) %s\n", NR, $0); }' <<< "$output" | column "${extra_column_args[@]}"
 				if [ "$header" ]; then
 					echo
 				fi
