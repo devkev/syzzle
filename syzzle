@@ -723,7 +723,6 @@ function __syz::__define_internal_functions {
 
 
 	function __syz::__resolve_loadable_dir {
-		# FIXME: if no trailing "/<version>", then figure out and use the default version
 		local target="$1" ; shift
 		local ${1+-n} output_pv="$1" ; shift   # "pv" == "<pkgname>/<version>"
 		local ${1+-n} output_dir="$1" ; shift
@@ -734,6 +733,52 @@ function __syz::__define_internal_functions {
 		if [ "$SYZ_PATH" ]; then
 			__syz::__set_nullglob
 			for basedir in "${_syz_path[@]}"; do
+				case "$target" in
+					*/*) ;;
+					*)
+						# user hasn't specified version, so see if we can figure out the default
+						# FIXME: don't do this per-syzpath entry, instead look across all the syzpath entries at once
+						local default_version
+						if [ -L "$basedir/$target"/current ]; then
+							local current_link="$(readlink "$basedir/$target"/current)"
+							case "$current_link" in
+								*/*)
+									# not a relative symlink into the same directory - ignore
+									;;
+								*)
+									default_version="$current_link"
+									;;
+							esac
+						elif [ -L "$basedir/$target"/default ]; then
+							local default_link="$(readlink "$basedir/$target"/default)"
+							case "$default_link" in
+								*/*)
+									# not a relative symlink into the same directory - ignore
+									;;
+								*)
+									default_version="$default_link"
+									;;
+							esac
+						elif [ -d "$basedir/$target" -a -r "$basedir/$target" ]; then
+							# get the dirs under the target dir, sorted by version
+							local -a versions
+							readarray -t versions < <(/bin/ls -vp "$basedir/$target")
+							# https://stackoverflow.com/a/40375567
+							local index
+							for index in "${!versions[@]}"; do
+								[[ ${versions[$index]} =~ /$ ]] || unset -v 'versions[$index]'
+							done
+							versions=("${versions[@]%/}")
+							# the final one in the list is the latest, so use that
+							if [ "${#versions[@]}" -gt 0 ]; then
+								default_version="${versions[$((${#versions[@]}-1))]}"
+							fi
+						fi
+						if [ "$default_version" ]; then
+							target="$target/$default_version"
+						fi
+						;;
+				esac
 				if __syz::__is_loadable_dir "$basedir/$target"; then
 					output_pv="$target"
 					output_dir="$basedir/$target"
@@ -1063,6 +1108,6 @@ __syz::__define_interface_functions
 
 
 
-# FIXME: source user's ~/.syzrc, if present
+# FIXME: source user's ~/.syzzlerc, if present
 
 
