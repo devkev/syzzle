@@ -206,6 +206,10 @@ function __syz::__define_external_functions {
 						fi
 					fi
 
+					local default_target
+					__syz::__resolve_version "$pkgname" "$basedir" default_target
+					local default_version="${default_target#$pkgname/}"
+
 					local versiondir
 					for versiondir in "$pkgdir"/*; do
 						local version="${versiondir#$pkgdir/}"
@@ -217,6 +221,9 @@ function __syz::__define_external_functions {
 								: # ignore
 							elif __syz::__is_loadable_dir "$versiondir"; then
 								local suffix=""
+								if [ "$default_version" = "$version" ]; then
+									suffix+=" *"
+								fi
 								if [ "$current" = "$version" ]; then
 									suffix+=" (current)"
 								elif [ "$default" = "$version" ]; then
