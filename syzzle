@@ -136,7 +136,7 @@ function __syz::__define_external_functions {
 	__syz::__add_subcommand_help_break
 
 
-	__syz::__add_subcommand_help "status" "" "Show current status (version, loaded and inactive modules)"
+	__syz::__add_subcommand_help "status" "[prefix]" "Show current status (version, loaded and inactive modules [that start with prefix])"
 
 	function syz::status {
 		echo
@@ -151,35 +151,71 @@ function __syz::__define_external_functions {
 	}
 
 
-	__syz::__add_subcommand_help "loaded" "" "List currently loaded modules"
+	__syz::__add_subcommand_help "loaded" "[prefix]" "List currently loaded modules [that start with prefix]"
 
 	function syz::loaded {
+		local match="$1"; shift
+
 		# FIXME: identify orphaned modules and display them differently/separately.
 		# Oprhaned modules are those that have been loaded, but now fail __syz::__is_loadable_dir.
 		local -a _loaded
 		__syz::__parse_list _loaded "$SYZ_MODULES"
+
+		# FIXME: factorise this into a __syz::__filter_array
+		if [ "$match" ]; then
+			local index
+			for index in "${!_loaded[@]}"; do
+				[[ ${_loaded[$index]} =~ ^"$match" ]] || unset -v '_loaded[$index]'
+			done
+			_loaded=("${_loaded[@]}")
+		fi
+
 		local _loaded_str
 		__syz::__stringify_array -d "$__syz_nl" _loaded_str _loaded
-		__syz::__columnate "Currently loaded modules" "No modules currently loaded." '' <<< "$_loaded_str"
+
+		if [ "$match" ]; then
+			__syz::__columnate "Currently loaded modules starting with '$match'" "No currently loaded modules starting with '$match'." '' <<< "$_loaded_str"
+		else
+			__syz::__columnate "Currently loaded modules" "No currently loaded modules." '' <<< "$_loaded_str"
+		fi
 	}
 
 
-	__syz::__add_subcommand_help "inactive" "" "List currently inactive modules"
+	__syz::__add_subcommand_help "inactive" "[prefix]" "List currently inactive modules [that start with prefix]"
 
 	function syz::inactive {
+		local match="$1"; shift
+
 		local -a _loaded
 		__syz::__parse_list _loaded "$SYZ_INACTIVE_MODULES"
+
+		# FIXME: factorise this into a __syz::__filter_array
+		if [ "$match" ]; then
+			local index
+			for index in "${!_loaded[@]}"; do
+				[[ ${_loaded[$index]} =~ ^"$match" ]] || unset -v '_loaded[$index]'
+			done
+			_loaded=("${_loaded[@]}")
+		fi
+
 		local _loaded_str
 		__syz::__stringify_array -d "$__syz_nl" _loaded_str _loaded
-		__syz::__columnate "Inactive modules" "No inactive modules." '' <<< "$_loaded_str"
+
+		if [ "$match" ]; then
+			__syz::__columnate "Inactive modules starting with '$match'" "No inactive modules starting with '$match'." '' <<< "$_loaded_str"
+		else
+			__syz::__columnate "Inactive modules" "No inactive modules." '' <<< "$_loaded_str"
+		fi
 	}
 
 
-	__syz::__add_subcommand_help "avail" "" "List modules available for loading"
+	__syz::__add_subcommand_help "avail" "[prefix]" "List modules available for loading [that start with prefix]"
 
 	function syz::avail {
-		# FIXME: accept an arg which is a prefix-match to limit things to (defaults to "")
-		# FIXME: accept multiple args
+		# FIXME: accept multiple args (what does this even mean?)
+
+		local match="$1"; shift
+
 		local basedir
 		local -a _modules=()
 		local -a _syz_path
@@ -254,14 +290,18 @@ function __syz::__define_external_functions {
 								elif [ "$default" = "$version" ]; then
 									suffix+=" (default)"
 								fi
-								_modules+=("$prefix$pkgname/$version$suffix")
+								if [[ ! "$match" || "$pkgname/$version" =~ ^"$match" ]]; then
+									_modules+=("$prefix$pkgname/$version$suffix")
+								fi
 							else
 								# not loadable
 								: # ignore
 							fi
 						else
 							if __syz::__is_loadable_dir "$versiondir"; then
-								_modules+=("$pkgname/$version")
+								if [[ ! "$match" || "$pkgname/$version" =~ ^"$match" ]]; then
+									_modules+=("$pkgname/$version")
+								fi
 							fi
 						fi
 					done
@@ -269,9 +309,15 @@ function __syz::__define_external_functions {
 			done
 			__syz::__restore_nullglob
 		fi
+
 		local _str
 		__syz::__stringify_array -d "$__syz_nl" _str _modules
-		__syz::__columnate "Available modules" "No modules available." "$extra_cols" <<< "$_str"
+
+		if [ "$match" ]; then
+			__syz::__columnate "Available modules starting with '$match'" "No modules available starting with '$match'." "$extra_cols" <<< "$_str"
+		else
+			__syz::__columnate "Available modules" "No modules available." "$extra_cols" <<< "$_str"
+		fi
 	}
 
 
