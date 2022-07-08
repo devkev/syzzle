@@ -1195,13 +1195,31 @@ function __syz_complete {
 	elif [ $COMP_CWORD -gt 1 ]; then
 		case "${COMP_WORDS[1]}" in
 			load|show|install|is-loaded|status|avail|loaded|inactive)
-				# the candidate list is `syz avail`, plus plain pkgnames
+				# the candidate list is `syz avail`, without "current" or "default", plus plain pkgnames (as long as they match the partial word)
 				# FIXME: filter COMPREPLY natively in bash, not with gawk
-				readarray -t COMPREPLY < <(syz::avail "${COMP_WORDS[$COMP_CWORD]}" | gawk -v filter="${COMP_WORDS[$COMP_CWORD]}" '$0 !~ /\/current$/ && $0 !~ /\/default$/ { print; pkgname = gensub("/.*$", "", 1); pkgs[pkgname] = 1; } END { for (i in pkgs) { if (substr(i, 0, length(filter)) == filter) { print i; } } }')
+				readarray -t COMPREPLY < <(
+						syz::avail "${COMP_WORDS[$COMP_CWORD]}" \
+							| gawk -v filter="${COMP_WORDS[$COMP_CWORD]}" '
+								$0 !~ /\/current$/ && $0 !~ /\/default$/ {
+									print;
+									pkgname = gensub("/.*$", "", 1);
+									pkgs[pkgname] = 1;
+								}
+								END {
+									for (i in pkgs) {
+										if (substr(i, 0, length(filter)) == filter) {
+											print i;
+										}
+									}
+								}'
+					)
 				;;
 			unload)
 				# the candidate list is `syz loaded` + `syz inactive`
-				readarray -t COMPREPLY < <(syz::loaded "${COMP_WORDS[$COMP_CWORD]}" ; syz::inactive "${COMP_WORDS[$COMP_CWORD]}")
+				readarray -t COMPREPLY < <(
+						syz::loaded "${COMP_WORDS[$COMP_CWORD]}"
+						syz::inactive "${COMP_WORDS[$COMP_CWORD]}"
+					)
 				;;
 			*)
 				return
