@@ -25,7 +25,11 @@ function __syz::__define_external_functions {
 	unset -f __syz::__define_external_functions
 
 	function syz {
-		if ! __syz::__rerun_if_updated "$@"; then
+		if __syz::__reload_if_updated "$@"; then
+			# syzzle was reloaded, so re-launch ourself completely
+			"${FUNCNAME[0]}" "$@"
+		else
+			# syzzle wasn't updated, so just dispatch
 			syz::dispatch "$@"
 		fi
 	}
@@ -605,15 +609,13 @@ function __syz::__define_internal_functions {
 	}
 
 
-	function __syz::__rerun_if_updated {
+	function __syz::__reload_if_updated {
 		# FIXME: use a hash of the file contents instead
 		local modtime="$(stat -L -c '%Y' "$SYZ_SOURCE")"
 		if [ "$SYZ_SOURCED_AT" -a "$modtime" -a "$modtime" -gt "$SYZ_SOURCED_AT" ]; then
 			__syz::__verbose_output "syz: updated, auto-reloading..." 1>&2
 			__syz::__verbose_output 1>&2
 			syz::restart
-			# FIXME: the re-call of self should be done by the caller, who can simply do "$0" "$@"
-			syz "$@"
 			return 0
 		fi
 		return 1
