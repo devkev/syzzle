@@ -1173,6 +1173,49 @@ fi
 
 ##################################################
 ##
+##  Setup programmable completion
+##
+##################################################
+
+
+function __syz_complete {
+	if __syz::__reload_if_updated; then
+		"${FUNCNAME[0]}" "$@"
+		return
+	fi
+	if [ $COMP_CWORD -eq 1 ]; then
+		for name in "${__syz_subcommands[@]}"; do
+			case "$name" in
+				_) ;;  # ignore
+				"${COMP_WORDS[$COMP_CWORD]}"*)
+					COMPREPLY+=("$name")
+					;;
+			esac
+		done
+	elif [ $COMP_CWORD -gt 1 ]; then
+		case "${COMP_WORDS[1]}" in
+			load|show|install|is-loaded|status|avail|loaded|inactive)
+				# the candidate list is `syz avail`, plus plain pkgnames
+				# FIXME: filter COMPREPLY natively in bash, not with gawk
+				readarray -t COMPREPLY < <(syz::avail "${COMP_WORDS[$COMP_CWORD]}" | gawk -v filter="${COMP_WORDS[$COMP_CWORD]}" '$0 !~ /\/current$/ && $0 !~ /\/default$/ { print; pkgname = gensub("/.*$", "", 1); pkgs[pkgname] = 1; } END { for (i in pkgs) { if (substr(i, 0, length(filter)) == filter) { print i; } } }')
+				;;
+			unload)
+				# the candidate list is `syz loaded` + `syz inactive`
+				readarray -t COMPREPLY < <(syz::loaded "${COMP_WORDS[$COMP_CWORD]}" ; syz::inactive "${COMP_WORDS[$COMP_CWORD]}")
+				;;
+			*)
+				return
+				;;
+		esac
+	fi
+}
+
+complete -F __syz_complete syz sw em
+
+
+
+##################################################
+##
 ##  Setup internal variables
 ##
 ##################################################
