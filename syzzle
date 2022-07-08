@@ -789,6 +789,7 @@ function __syz::__define_internal_functions {
 				elif [ -d "$basedir/$target" -a -r "$basedir/$target" ]; then
 					# get the dirs under the target dir, sorted by version
 					local -a versions
+					# FIXME: do this without relying on GNU options to ls, or ls (subprocess) at all
 					readarray -t versions < <(/bin/ls -vp "$basedir/$target")
 					# https://stackoverflow.com/a/40375567
 					local index
