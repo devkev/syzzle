@@ -7,7 +7,7 @@ SYZ_SOURCE="${BASH_SOURCE[0]}"
 # FIXME: use a hash of the file contents instead
 SYZ_SOURCED_AT="$(date +%s)"
 
-SYZ_VERSION=0.0.3
+SYZ_VERSION=0.0.4
 
 
 
